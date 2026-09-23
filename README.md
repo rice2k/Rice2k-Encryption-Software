@@ -2,11 +2,20 @@
 
 **Rice2k Encryption Software** is a modern, user-friendly Windows encryption application designed to make strong data protection understandable and practical for everyday users while still providing advanced controls for experienced users.
 
-> **Project status:** early development / security-focused foundation. Do not rely on a pre-1.0 build as the only copy of irreplaceable data.
+> **Project status:** early development / security-focused foundation. Current application version: **0.2.0-preview.1**. Do not rely on a pre-1.0 build as the only copy of irreplaceable data.
 
 ## What works in the current development foundation
 
 - Windows WPF Command Center with a dark, readable Rice2k interface
+- Three-step beginner-friendly **Encrypt** workflow
+- Three-step beginner-friendly **Decrypt** workflow
+- Drag-and-drop routing: normal files open Encrypt; `.r2kenc` files open Decrypt
+- Password confirmation before file encryption
+- Local strong-password generation for the Encrypt workflow
+- Preflight checks for source readability, source/destination conflicts, destination availability, and free space when the destination exposes it
+- Automatic **Keep Both** naming so existing destination files are not overwritten
+- Dedicated operation screens with visible safety/encrypt/verify/finalize stages
+- Dedicated completion screens with output path, elapsed time, and Open Folder actions
 - File encryption to versioned `.r2kenc` containers
 - File decryption with authentication and format checks
 - XChaCha20-Poly1305 authenticated encryption
@@ -17,7 +26,7 @@
 - Optional verification of encrypted data before finalization
 - Cancellation with incomplete-output cleanup
 - Original source file preserved by default
-- Detailed progress model: percentage, bytes, speed, elapsed time, stage and estimated time remaining
+- Detailed progress: percentage, bytes, speed, elapsed time, current stage, and estimated time remaining
 - Authenticated text encryption/decryption
 - Secure random password generator
 - SHA-256 and SHA-512 file integrity tools
@@ -27,14 +36,14 @@
 
 The full product is being implemented in milestones. Planned features include:
 
-- Three-step beginner-friendly Encrypt/Decrypt wizard
-- Drag-and-drop file and folder workflows
-- Folder and batch encryption
-- Batch queue with overall and per-item progress
+- Folder encryption
+- Multi-file batch encryption and queue management
+- Overall and per-item batch progress
+- Drag-and-drop folders and multi-file batches
 - Simple and Advanced modes
-- Preflight disk-space/permission/collision checks
 - Plain-English errors with expandable technical details
-- Dedicated success/verification screens
+- First-run tour and contextual hints
+- Searchable settings
 - `.r2kvault` secure vaults
 - Key Manager and `.r2kkey` exports
 - Password + key-file protection
@@ -42,7 +51,6 @@ The full product is being implemented in milestones. Planned features include:
 - Public-key recipient encryption
 - Digital signatures (`.r2ksig`)
 - Privacy Mode, auto-lock and clipboard auto-clear
-- Searchable settings, first-run tour and contextual hints
 - Accessibility review for keyboard, screen readers, scaling, high contrast and reduced motion
 - AES-256-GCM interoperability mode
 - Signed Windows installer, portable build and signed update path
