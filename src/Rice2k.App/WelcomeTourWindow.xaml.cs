@@ -72,7 +72,7 @@ public partial class WelcomeTourWindow : Window
     private void CompleteTour()
     {
         var current = _settingsService.Load();
-        _settingsService.Save(current with { FirstRunTourCompleted = true });
+        _settingsService.TrySave(current with { FirstRunTourCompleted = true });
         DialogResult = true;
     }
 
