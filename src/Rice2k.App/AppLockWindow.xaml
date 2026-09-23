@@ -1,0 +1,69 @@
+<Window x:Class="Rice2k.Encryption.AppLockWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rice2k Encryption Software — Locked"
+        Width="560" Height="420"
+        MinWidth="520" MinHeight="390"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
+        Topmost="False"
+        Closing="Window_Closing">
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,10,0,24">
+            <TextBlock Text="🔐" FontSize="44" HorizontalAlignment="Center" />
+            <TextBlock Text="Rice2k is locked" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,8,0,0" />
+            <TextBlock x:Name="ReasonText"
+                       Text="Enter your app-lock password to continue."
+                       Foreground="{StaticResource MutedTextBrush}"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="450"
+                       Margin="0,7,0,0" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" VerticalAlignment="Center">
+            <StackPanel>
+                <Label Content="App-lock password" />
+                <PasswordBox x:Name="PasswordBox"
+                             AutomationProperties.Name="Rice2k app-lock password"
+                             ToolTip="Enter the password configured for Rice2k application locking"
+                             KeyDown="PasswordBox_KeyDown" />
+                <TextBlock x:Name="StatusText"
+                           Text="Your encryption files and vaults use their own independent passwords and keys."
+                           Foreground="{StaticResource MutedTextBrush}"
+                           TextWrapping="Wrap"
+                           FontSize="12"
+                           Margin="0,8,0,0" />
+                <ProgressBar x:Name="BusyProgress" Height="8" Margin="0,12,0,0" IsIndeterminate="True" Visibility="Collapsed" />
+                <Button x:Name="UnlockButton"
+                        Content="Unlock Rice2k"
+                        Click="Unlock_Click"
+                        IsDefault="True"
+                        MinWidth="160"
+                        HorizontalAlignment="Right"
+                        Margin="0,16,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,22,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="App Lock is a local privacy barrier, not a replacement for Windows account security or full-disk encryption."
+                       Foreground="{StaticResource MutedTextBrush}"
+                       FontSize="11"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center" />
+            <Button Grid.Column="1"
+                    Content="Exit Rice2k"
+                    Click="Exit_Click"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Margin="18,0,0,0" />
+        </Grid>
+    </Grid>
+</Window>
