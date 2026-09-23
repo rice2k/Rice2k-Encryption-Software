@@ -15,7 +15,7 @@ This is the permanent engineering register for errors, bugs, release blockers, a
 |---|---|---|---|---|
 | R2K-VAL-001 | Blocker | Open | pre-0.6 | Complete solution has not yet completed a successful supported Windows + .NET 10 Release build. Step 1 of stabilization is to make this pass and record the result. |
 | R2K-TEST-001 | Blocker | Open | pre-0.6 | Source-controlled security/regression suite has not yet completed a successful supported Windows/.NET 10 run. Tracked in GitHub Issue #6. |
-| R2K-CI-001 | High | Open / infrastructure | 0.6.0-preview.2 | Hosted Actions checks continue to fail before executing a step. Automatic push validation produced job `107338276220` for run `35907363363`; the check finished in roughly two seconds, returned an empty step list, and had no downloadable job log. This still does not constitute a compiler result. |
+| R2K-CI-001 | High | Open / infrastructure | 0.6.0-preview.2 | Hosted Actions checks continue to fail before executing a step. Automatic push validation has repeatedly produced jobs with no assigned runner/steps/logs. This still does not constitute a compiler result. |
 | R2K-A11Y-001 | Blocker for RC/Stable | Open | 0.6 | Full Windows keyboard-only Encrypt/Decrypt acceptance run has not been performed. |
 | R2K-A11Y-002 | Blocker for RC/Stable | Open | 0.6 | Narrator/screen-reader, text scaling/DPI, multi-monitor, High Contrast and reduced-motion visual acceptance review remains unexecuted on Windows. |
 | R2K-PERF-001 | Blocker for Stable | Open | 0.4 | Multi-gigabyte file/vault performance and memory-use release-gate runs remain unexecuted. |
@@ -26,6 +26,7 @@ This is the permanent engineering register for errors, bugs, release blockers, a
 
 | ID | Severity | Fixed in | Description / resolution |
 |---|---|---|---|
+| R2K-SET-004 | Blocker / compile | 0.6.0-preview.4 stabilization source | Two Settings partial files defined the same `OnInitialized`, `ReduceMotion_Changed`, and `ReviewStoredHistory_Click` members, which would cause duplicate-member compiler errors. Removed the obsolete `SettingsSearchPanel.PrivacyHistory.cs`; the consolidated `SettingsSearchPanel.PrivacyExtras.cs` remains as the single implementation. |
 | R2K-SET-003 | Medium | 0.6.0-preview.4 stabilization source | Optional-history checkboxes were wired to the broad Privacy handler in XAML and also received a dedicated history handler at runtime, causing duplicate settings writes and an intermediate callback with stale history values. The legacy handlers are now detached before the dedicated history handlers are attached. |
 | R2K-UI-001 | Low | 0.6.0-preview.4 stabilization source | Legacy `MainWindow.xaml.cs` contains milestone-era `v0.2-dev` status suffixes. The version-status partial now normalizes those user-visible strings to the actual assembly informational version. Large-file source decomposition/cleanup can happen later without exposing the stale version to users. |
 | R2K-UI-002 | Medium | 0.6.0-preview.4 stabilization source | Replaced user-visible stale drag/drop behavior via a routed `OnDrop` override: one normal file routes to Encrypt, one `.r2kenc` routes to Decrypt, folders/multiple normal files open the implemented Batch Queue, and multiple encrypted containers receive accurate guidance instead of claiming batch support is a future milestone. |
