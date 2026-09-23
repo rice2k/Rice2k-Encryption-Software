@@ -14,6 +14,7 @@ public partial class FolderProtectionWindow : Window
     private Stopwatch? _stageTimer;
     private string? _stage;
     private bool _busy;
+    private bool _closeWhenFinished;
     private string? _completedPath;
 
     public FolderProtectionWindow()
@@ -160,6 +161,12 @@ public partial class FolderProtectionWindow : Window
             _cts = null;
             _stageTimer = null;
             _stage = null;
+
+            if (_closeWhenFinished)
+            {
+                _closeWhenFinished = false;
+                Dispatcher.InvokeAsync(Close);
+            }
         }
     }
 
@@ -193,12 +200,19 @@ public partial class FolderProtectionWindow : Window
             return;
 
         e.Cancel = true;
+        _closeWhenFinished = true;
+
         if (_cts is not null && !_cts.IsCancellationRequested)
         {
             CancelButton.IsEnabled = false;
             StatusText.Text = "Cancelling before close…";
-            ProgressDetailText.Text = "The window will remain open until the operation reaches a safe boundary.";
+            ProgressDetailText.Text = "The window will close automatically after the operation reaches a safe boundary.";
             _cts.Cancel();
+        }
+        else
+        {
+            StatusText.Text = "Finishing cancellation before close…";
+            ProgressDetailText.Text = "The window will close automatically when cleanup is complete.";
         }
     }
 
