@@ -2,7 +2,7 @@
 
 **Rice2k Encryption Software** is a modern, user-friendly Windows encryption application designed to make strong data protection understandable and practical for everyday users while still providing advanced security tools for experienced users.
 
-> **Project status:** early development / security-focused preview. Current application version: **0.6.0-preview.3**. Do not use a pre-1.0 build as the only copy of irreplaceable data, recovery material, or private keys.
+> **Project status:** early development / security-focused preview. Current application version: **0.6.0-preview.4**. Do not use a pre-1.0 build as the only copy of irreplaceable data, recovery material, or private keys.
 
 ## Current development features
 
@@ -17,7 +17,8 @@
 - Main status bar reads the actual application assembly version
 - Expanded keyboard navigation with F6 / Shift+F6 focus movement and shortcuts for major pages, Privacy Mode, App Lock, Settings, and Security Center
 - Shared visible keyboard-focus borders
-- Startup high-contrast palette mapping to Windows system colors
+- Windows High Contrast palette mapping that can update while Rice2k is running
+- Reduced-motion preference for nonessential indeterminate animation where supported
 
 ### File and folder protection
 
@@ -135,6 +136,10 @@ The v0.6 privacy layer now includes:
 - app-wide clipboard ownership generation so a newer Rice2k copy supersedes older Rice2k timers;
 - exact-value checking before automatic clearing, so Rice2k does not intentionally erase a newer clipboard value copied afterward;
 - protected clipboard behavior for main text/password/checksum copies and identity/contact/recipient fingerprints;
+- optional recent-file history, **off by default**, with bounded local storage, deduplication, review, and clearing;
+- optional persistent activity history, **off by default**, which stores only action names and timestamps after redaction;
+- Privacy Mode can clear optional recent-file and persistent activity history when enabled;
+- optional generic Windows completion notifications for encryption/decryption; notification text never includes filenames, paths, passwords, keys, or plaintext and is suppressed while Privacy Mode is on;
 - authenticated **App Lock** using an Argon2id-derived verifier stored separately from the password;
 - 12-character minimum App Lock password;
 - automatic App Lock at application startup after it has been configured;
@@ -180,11 +185,12 @@ The source-controlled xUnit suite covers, among other areas:
 - recipient and multi-recipient encryption/decryption;
 - detached signature creation, verification, and tamper detection;
 - public identity contact-store import/load/remove/tamper behavior;
+- privacy-history deduplication, action-only redaction, clearing, and oversized-file rejection;
 - App Lock credential round trip, wrong-password rejection, safe removal behavior, verifier modification, minimum-password policy, malformed JSON, unsupported versions, invalid salt length, oversized credential files, and hostile Argon2 operation/memory parameters.
 
 `tools/Rice2k.VaultBench` provides a repeatable local benchmark/correctness harness for larger vault workloads.
 
-> **Validation limitation:** the current working environment does not contain the .NET SDK. GitHub Actions validation attempts, including the latest retry, have ended before executing any workflow steps, so those runs do not establish either compilation success or source-code failure. The newer tests and v0.6 UI/App Lock changes are committed and source-reviewed but are **not claimed as compiled or executed** here.
+> **Validation limitation:** the current working environment does not contain the .NET SDK. GitHub Actions validation attempts, including the latest retry, have ended before executing any workflow steps, so those runs do not establish either compilation success or source-code failure. The newer tests and v0.6 UI/App Lock/privacy-history/notification changes are committed and source-reviewed but are **not claimed as compiled or executed** here.
 
 ## File formats
 
@@ -240,8 +246,8 @@ Major release gates still include:
 - execute the full test suite on the supported Windows/.NET 10 toolchain;
 - large-vault and multi-gigabyte benchmark runs;
 - complete v0.6 Privacy Mode/App Lock/Security Center acceptance testing on Windows;
-- optional recent-history and opt-in redacted persistent activity design;
 - full keyboard/screen-reader/high-contrast/scaling/reduced-motion review;
+- additional user-selectable theme modes beyond automatic Windows High Contrast adaptation;
 - Advanced Mode and compatibility controls;
 - AES-256-GCM interoperability mode;
 - broader fuzzing/concurrency tests;
