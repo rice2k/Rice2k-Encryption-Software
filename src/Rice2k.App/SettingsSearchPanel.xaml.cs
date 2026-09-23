@@ -112,7 +112,7 @@ public partial class SettingsSearchPanel : UserControl
             ? updated.PrivacyModeEnabled
                 ? "Privacy Mode is on. Session activity is hidden according to your selected privacy options."
                 : "Privacy Mode is off. Clipboard and App Lock controls remain independent."
-            : "Privacy preference could not be saved; the current session was updated only.";
+            : "Privacy preference could not be saved; it will apply for this session only.";
     }
 
     private void ClipboardSeconds_Changed(object sender, SelectionChangedEventArgs e)
@@ -149,9 +149,12 @@ public partial class SettingsSearchPanel : UserControl
 
     private async void ConfigureAppLock_Click(object sender, RoutedEventArgs e)
     {
+        var wasConfigured = _appLockService.IsConfigured();
+        string? newPassword = null;
+
         try
         {
-            if (_appLockService.IsConfigured())
+            if (wasConfigured)
             {
                 var currentPassword = PromptForPassword(
                     "Confirm Current App Lock",
@@ -176,30 +179,54 @@ public partial class SettingsSearchPanel : UserControl
                 }
             }
 
-            var newPassword = PromptForNewPassword(
+            newPassword = PromptForNewPassword(
                 "Set Rice2k App Lock Password",
                 "Use at least 12 characters. This password protects the running Rice2k interface; it does not replace any file or vault password.");
             if (newPassword is null)
                 return;
 
-            try
+            await Task.Run(() => _appLockService.SetPassword(newPassword));
+
+            var current = _settingsService.Load();
+            var updated = current with { AppLockEnabled = true };
+            if (!_settingsService.TrySave(updated))
             {
-                await Task.Run(() => _appLockService.SetPassword(newPassword));
-            }
-            finally
-            {
-                newPassword = string.Empty;
+                if (!wasConfigured)
+                {
+                    try
+                    {
+                        await Task.Run(() => _appLockService.Remove(newPassword));
+                    }
+                    catch
+                    {
+                        // The UI below exposes a leftover credential so it can still be removed manually.
+                    }
+                }
+
+                var effective = _settingsService.Load();
+                _privacyChanged?.Invoke(effective);
+                RefreshPrivacySettings(effective);
+                PrivacyStatusText.Text = wasConfigured
+                    ? "The App Lock password was changed, but Rice2k could not save the updated enable state. Review the App Lock status before closing Settings."
+                    : _appLockService.IsConfigured()
+                        ? "Rice2k could not save the App Lock enable state. A credential remains stored but automatic locking is disabled; remove it or retry setup."
+                        : "Rice2k could not save App Lock settings, so the new credential was rolled back.";
+                return;
             }
 
-            var updated = _settingsService.Load() with { AppLockEnabled = true };
-            _settingsService.TrySave(updated);
             _privacyChanged?.Invoke(updated);
             RefreshPrivacySettings(updated);
             PrivacyStatusText.Text = "✓ App Lock configured. Rice2k will require this password on the next startup and whenever an enabled lock trigger fires.";
         }
         catch (Exception ex)
         {
+            var effective = _settingsService.Load();
+            RefreshPrivacySettings(effective);
             PrivacyStatusText.Text = $"App Lock could not be configured: {ex.Message}";
+        }
+        finally
+        {
+            newPassword = string.Empty;
         }
     }
 
@@ -217,28 +244,57 @@ public partial class SettingsSearchPanel : UserControl
         if (password is null)
             return;
 
+        var previous = _settingsService.Load();
         try
         {
-            await Task.Run(() => _appLockService.Remove(password));
-            var updated = _settingsService.Load() with
+            var valid = await Task.Run(() => _appLockService.Verify(password));
+            if (!valid)
+            {
+                PrivacyStatusText.Text = "The app-lock password is incorrect. App Lock remains configured.";
+                return;
+            }
+
+            var updated = previous with
             {
                 AppLockEnabled = false,
                 LockOnMinimize = false,
                 LockOnWindowsSessionLock = false,
                 AppLockInactivityMinutes = 0
             };
-            _settingsService.TrySave(updated);
+
+            if (!_settingsService.TrySave(updated))
+            {
+                PrivacyStatusText.Text = "Rice2k could not save the disabled App Lock state, so the credential was not removed.";
+                return;
+            }
+
+            try
+            {
+                await Task.Run(() => _appLockService.Remove(password));
+            }
+            catch
+            {
+                _settingsService.TrySave(previous);
+                throw;
+            }
+
             _privacyChanged?.Invoke(updated);
             RefreshPrivacySettings(updated);
             PrivacyStatusText.Text = "App Lock removed. File/vault encryption settings were not changed.";
         }
         catch (CryptographicException)
         {
-            PrivacyStatusText.Text = "The app-lock password is incorrect. App Lock remains configured.";
+            var effective = _settingsService.Load();
+            _privacyChanged?.Invoke(effective);
+            RefreshPrivacySettings(effective);
+            PrivacyStatusText.Text = "The app-lock password is incorrect or the credential changed. App Lock was not removed.";
         }
         catch (Exception ex)
         {
-            PrivacyStatusText.Text = $"App Lock could not be removed: {ex.Message}";
+            var effective = _settingsService.Load();
+            _privacyChanged?.Invoke(effective);
+            RefreshPrivacySettings(effective);
+            PrivacyStatusText.Text = $"App Lock could not be removed safely: {ex.Message}";
         }
         finally
         {
@@ -319,18 +375,23 @@ public partial class SettingsSearchPanel : UserControl
 
     private void RefreshAppLockControls(Rice2kAppSettings settings)
     {
-        var configured = _appLockService.IsConfigured() && settings.AppLockEnabled;
-        ConfigureAppLockButton.Content = configured ? "Change App Lock Password…" : "Set App Lock Password…";
-        RemoveAppLockButton.IsEnabled = configured;
-        LockOnMinimizeCheck.IsEnabled = configured;
-        LockOnWindowsSessionCheck.IsEnabled = configured;
-        AppLockInactivityCombo.IsEnabled = configured;
-        AppLockConfiguredText.Text = configured
-            ? "✓ App Lock configured — startup locking is active"
+        var credentialPresent = _appLockService.IsConfigured();
+        var enabled = credentialPresent && settings.AppLockEnabled;
+
+        ConfigureAppLockButton.Content = credentialPresent ? "Change App Lock Password…" : "Set App Lock Password…";
+        RemoveAppLockButton.IsEnabled = credentialPresent;
+        LockOnMinimizeCheck.IsEnabled = enabled;
+        LockOnWindowsSessionCheck.IsEnabled = enabled;
+        AppLockInactivityCombo.IsEnabled = enabled;
+
+        AppLockConfiguredText.Text = credentialPresent
+            ? enabled
+                ? "✓ App Lock configured — startup locking is active"
+                : "⚠ App Lock credential is stored, but application locking is currently disabled"
             : "App Lock is not configured.";
     }
 
-    private static string? PromptForPassword(string title, string guidance)
+    private string? PromptForPassword(string title, string guidance)
     {
         var password = new PasswordBox { Margin = new Thickness(0, 5, 0, 12) };
         var ok = new Button { Content = "Continue", IsDefault = true, MinWidth = 105 };
@@ -348,10 +409,11 @@ public partial class SettingsSearchPanel : UserControl
         var dialog = new Window
         {
             Title = title,
+            Owner = _owner,
             Width = 500,
             Height = 275,
             ResizeMode = ResizeMode.NoResize,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Content = panel
         };
         ok.Click += (_, _) =>
@@ -375,7 +437,7 @@ public partial class SettingsSearchPanel : UserControl
         return result;
     }
 
-    private static string? PromptForNewPassword(string title, string guidance)
+    private string? PromptForNewPassword(string title, string guidance)
     {
         var first = new PasswordBox { Margin = new Thickness(0, 5, 0, 10) };
         var second = new PasswordBox { Margin = new Thickness(0, 5, 0, 12) };
@@ -396,10 +458,11 @@ public partial class SettingsSearchPanel : UserControl
         var dialog = new Window
         {
             Title = title,
+            Owner = _owner,
             Width = 500,
             Height = 345,
             ResizeMode = ResizeMode.NoResize,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Content = panel
         };
         ok.Click += (_, _) =>
