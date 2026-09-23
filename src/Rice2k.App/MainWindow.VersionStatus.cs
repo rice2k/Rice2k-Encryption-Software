@@ -1,20 +1,25 @@
 using System.ComponentModel;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Windows.Controls;
 
 namespace Rice2k.Encryption;
 
 public partial class MainWindow
 {
+    private static readonly Regex LegacyDevelopmentVersionPattern = new(
+        @"\bv\d+(?:\.\d+){1,3}-dev\b",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private bool _normalizingVersionStatus;
 
     private void InitializeVersionStatus()
     {
         GlobalStatusText.Text = $"● Ready   |   Offline/local   |   v{GetApplicationVersion()}";
 
-        // MainWindow.xaml.cs still contains a few milestone-era status messages with
-        // a hard-coded v0.2-dev suffix. Normalize those user-visible strings until the
-        // large legacy file is decomposed during a later refactor.
+        // Older MainWindow partials still contain milestone-era status messages such
+        // as v0.2-dev and v0.3-dev. Normalize any legacy *-dev version token until
+        // those larger files are decomposed and the literals can be removed directly.
         var descriptor = DependencyPropertyDescriptor.FromProperty(
             TextBlock.TextProperty,
             typeof(TextBlock));
@@ -23,20 +28,18 @@ public partial class MainWindow
 
     private void NormalizeLegacyVersionStatus()
     {
-        if (_normalizingVersionStatus ||
-            string.IsNullOrWhiteSpace(GlobalStatusText.Text) ||
-            !GlobalStatusText.Text.Contains("v0.2-dev", StringComparison.Ordinal))
-        {
+        if (_normalizingVersionStatus || string.IsNullOrWhiteSpace(GlobalStatusText.Text))
             return;
-        }
+
+        if (!LegacyDevelopmentVersionPattern.IsMatch(GlobalStatusText.Text))
+            return;
 
         try
         {
             _normalizingVersionStatus = true;
-            GlobalStatusText.Text = GlobalStatusText.Text.Replace(
-                "v0.2-dev",
-                $"v{GetApplicationVersion()}",
-                StringComparison.Ordinal);
+            GlobalStatusText.Text = LegacyDevelopmentVersionPattern.Replace(
+                GlobalStatusText.Text,
+                $"v{GetApplicationVersion()}");
         }
         finally
         {
