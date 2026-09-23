@@ -23,6 +23,12 @@ public partial class MainWindow
         InitializeKeyFileProtectionUi();
         InitializeKeyFileResetHooks();
 
+        // A configured startup lock must authenticate before any secondary Rice2k
+        // dialog (including onboarding) is allowed to appear.
+        RequestStartupLockIfNeeded();
+        if (Application.Current.Dispatcher.HasShutdownStarted)
+            return;
+
         if (!_onboardingChecked)
         {
             _onboardingChecked = true;
@@ -36,7 +42,5 @@ public partial class MainWindow
                 tour.ShowDialog();
             }
         }
-
-        RequestStartupLockIfNeeded();
     }
 }
