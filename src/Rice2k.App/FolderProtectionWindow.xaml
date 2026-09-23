@@ -1,0 +1,104 @@
+<Window x:Class="Rice2k.Encryption.FolderProtectionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rice2k — Protect Folder"
+        Width="820" Height="720"
+        MinWidth="700" MinHeight="620"
+        WindowStartupLocation="CenterOwner"
+        Closing="Window_Closing">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="26">
+            <TextBlock Text="Protect Folder" FontSize="30" FontWeight="SemiBold" />
+            <TextBlock Text="Turn a folder into one verified Rice2k secure container without manually setting up a vault first."
+                       Foreground="{StaticResource MutedTextBrush}"
+                       TextWrapping="Wrap"
+                       Margin="0,5,0,20" />
+
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="1 — Choose folder" FontSize="19" FontWeight="SemiBold" />
+                    <TextBlock Text="Rice2k preserves the folder's relative file structure. Reparse points/junctions and inaccessible folders are skipped."
+                               Foreground="{StaticResource MutedTextBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,5,0,12" />
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox x:Name="SourceFolderBox" IsReadOnly="True" AutomationProperties.Name="Folder to protect" />
+                        <Button Grid.Column="1" Content="Browse…" Click="BrowseFolder_Click" Margin="10,0,0,0" />
+                    </Grid>
+                    <TextBlock x:Name="FolderSummaryText" Text="No folder selected" Foreground="{StaticResource MutedTextBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="2 — Choose encrypted container" FontSize="19" FontWeight="SemiBold" />
+                    <TextBlock Text="The output is a normal .r2kvault container and can later be opened in the Secure Vault browser."
+                               Foreground="{StaticResource MutedTextBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,5,0,12" />
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox x:Name="DestinationBox" IsReadOnly="True" AutomationProperties.Name="Encrypted folder container destination" />
+                        <Button Grid.Column="1" Content="Choose location…" Click="BrowseDestination_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                    </Grid>
+                    <TextBlock Text="For safety, Rice2k will not place the new vault inside the folder being protected and will not overwrite an existing file."
+                               Foreground="{StaticResource MutedTextBrush}"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Margin="0,7,0,0" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="3 — Create password" FontSize="19" FontWeight="SemiBold" />
+                    <TextBlock Text="Use at least 12 characters. This preview cannot recover a forgotten vault password."
+                               Foreground="{StaticResource WarningBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,5,0,12" />
+                    <Label Content="Vault password" />
+                    <PasswordBox x:Name="PasswordBox" AutomationProperties.Name="Vault password" />
+                    <Label Content="Confirm password" Margin="0,12,0,0" />
+                    <PasswordBox x:Name="ConfirmPasswordBox" AutomationProperties.Name="Confirm vault password" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Operation status" FontSize="19" FontWeight="SemiBold" />
+                    <TextBlock x:Name="StatusText" Text="Ready" FontWeight="SemiBold" Margin="0,12,0,4" AutomationProperties.Name="Folder protection status" />
+                    <ProgressBar x:Name="ProgressBar" Height="12" Minimum="0" Maximum="100" IsIndeterminate="False" Value="0" Margin="0,6,0,7" AutomationProperties.Name="Folder protection progress" />
+                    <TextBlock x:Name="ProgressDetailText" Text="Choose a folder, destination, and password to begin."
+                               Foreground="{StaticResource MutedTextBrush}"
+                               FontSize="12"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Button x:Name="OpenFolderButton"
+                        Content="Open output folder"
+                        Click="OpenOutputFolder_Click"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Visibility="Collapsed"
+                        Width="155"
+                        HorizontalAlignment="Left" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button x:Name="CancelButton"
+                            Content="Cancel safely"
+                            Click="Cancel_Click"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            IsEnabled="False"
+                            Visibility="Collapsed"
+                            MinWidth="120" />
+                    <Button x:Name="StartButton"
+                            Content="🔒 Protect Folder"
+                            Click="Start_Click"
+                            MinWidth="165" />
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Window>
