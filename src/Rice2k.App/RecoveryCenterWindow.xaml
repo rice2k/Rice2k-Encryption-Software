@@ -1,0 +1,69 @@
+<Window x:Class="Rice2k.Encryption.RecoveryCenterWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rice2k Recovery Center"
+        Width="1040" Height="760"
+        MinWidth="880" MinHeight="650"
+        WindowStartupLocation="CenterOwner">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24">
+            <TextBlock Text="Recovery Center" FontSize="28" FontWeight="SemiBold" />
+            <TextBlock Text="Create a separate encrypted recovery package, test it before relying on it, and restore a new .r2kkey package when needed." Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,18" TextWrapping="Wrap" />
+
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="1. Create a recovery package" FontSize="19" FontWeight="SemiBold" />
+                    <TextBlock Text="Start from an existing encrypted .r2kkey package. Rice2k unlocks it in memory, then creates a separately password-protected .r2krecovery package." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,5,0,14" TextWrapping="Wrap" />
+
+                    <Label Content="Existing .r2kkey package" />
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox x:Name="SourceKeyPackageBox" IsReadOnly="True" />
+                        <Button Grid.Column="1" Content="Browse…" Click="BrowseSourceKeyPackage_Click" Margin="10,0,0,0" />
+                    </Grid>
+                    <Label Content="Current key-package password" Margin="0,10,0,0" />
+                    <PasswordBox x:Name="SourceKeyPasswordBox" />
+
+                    <Label Content="New recovery password" Margin="0,10,0,0" />
+                    <PasswordBox x:Name="RecoveryPasswordBox" />
+                    <Label Content="Confirm recovery password" Margin="0,8,0,0" />
+                    <PasswordBox x:Name="RecoveryConfirmPasswordBox" />
+                    <TextBlock Text="Use a recovery password you can store separately from the normal key-package password." Foreground="{StaticResource WarningBrush}" FontSize="12" Margin="0,5,0,0" TextWrapping="Wrap" />
+
+                    <Button Content="Create .r2krecovery package…" Click="CreateRecoveryPackage_Click" Width="230" HorizontalAlignment="Left" Margin="0,14,0,0" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="2. Test a recovery package" FontSize="19" FontWeight="SemiBold" />
+                    <TextBlock Text="A successful test authenticates and decrypts the package in memory, confirms it contains a valid 256-bit key, displays only the safe fingerprint, then clears the recovered key bytes." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,5,0,14" TextWrapping="Wrap" />
+
+                    <Label Content="Recovery package" />
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox x:Name="TestRecoveryPackageBox" IsReadOnly="True" />
+                        <Button Grid.Column="1" Content="Browse…" Click="BrowseRecoveryPackage_Click" Margin="10,0,0,0" />
+                    </Grid>
+                    <Label Content="Recovery password" Margin="0,10,0,0" />
+                    <PasswordBox x:Name="TestRecoveryPasswordBox" />
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Content="Test Recovery" Click="TestRecovery_Click" Width="150" />
+                        <Button Content="Restore as .r2kkey…" Click="RestoreKeyPackage_Click" Style="{StaticResource SecondaryButtonStyle}" Width="180" />
+                    </StackPanel>
+
+                    <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,14,0,0">
+                        <StackPanel>
+                            <TextBlock x:Name="RecoveryTestStatusText" Text="No recovery package tested yet." FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBox x:Name="RecoveryFingerprintBox" IsReadOnly="True" FontFamily="Cascadia Mono, Consolas" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                <TextBlock x:Name="RecoveryStatusText" Text="Important: recovery only works if you keep both the recovery file and its recovery password. Rice2k cannot bypass a lost recovery password." Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" />
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Window>
