@@ -101,7 +101,7 @@ public sealed class SecureVaultParserSafetyTests
     }
 
     [Fact]
-    public async Task Unlock_TruncatedHeader_IsRejected()
+    public async Task Unlock_TruncatedHeader_IsRejectedAsInvalidData()
     {
         using var temp = new TempDirectory();
         var service = new SecureVaultService();
@@ -113,7 +113,8 @@ public sealed class SecureVaultParserSafetyTests
         await using (var stream = new FileStream(vaultPath, FileMode.Open, FileAccess.Write, FileShare.None))
             stream.SetLength(20);
 
-        await Assert.ThrowsAnyAsync<Exception>(() => service.UnlockAsync(vaultPath, Password));
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.UnlockAsync(vaultPath, Password));
+        Assert.Contains("truncated", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
