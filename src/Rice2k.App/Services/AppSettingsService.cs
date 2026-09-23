@@ -37,34 +37,45 @@ public sealed class AppSettingsService
         }
     }
 
-    public void Save(Rice2kAppSettings settings)
+    public bool TrySave(Rice2kAppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        Directory.CreateDirectory(_settingsDirectory);
-
-        var tempPath = Path.Combine(
-            _settingsDirectory,
-            $"settings.{Guid.NewGuid():N}.tmp");
+        string? tempPath = null;
 
         try
         {
+            Directory.CreateDirectory(_settingsDirectory);
+            tempPath = Path.Combine(
+                _settingsDirectory,
+                $"settings.{Guid.NewGuid():N}.tmp");
+
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions
             {
                 WriteIndented = true
             });
             File.WriteAllText(tempPath, json);
             File.Move(tempPath, _settingsPath, overwrite: true);
+            return true;
+        }
+        catch
+        {
+            // Preferences are intentionally non-fatal. The application continues
+            // with safe defaults if Windows cannot persist this small settings file.
+            return false;
         }
         finally
         {
-            try
+            if (!string.IsNullOrWhiteSpace(tempPath))
             {
-                if (File.Exists(tempPath))
-                    File.Delete(tempPath);
-            }
-            catch
-            {
-                // Best effort cleanup only.
+                try
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+                catch
+                {
+                    // Best effort cleanup only.
+                }
             }
         }
     }
