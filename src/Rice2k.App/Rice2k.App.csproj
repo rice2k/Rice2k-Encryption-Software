@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Rice2kEncryption</AssemblyName>
+    <RootNamespace>Rice2k.Encryption</RootNamespace>
+    <ApplicationIcon Condition="Exists('Assets\\Rice2k.ico')">Assets\Rice2k.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
+    <Authors>Christopher Schumacher / Rice2k</Authors>
+    <Product>Rice2k Encryption Software</Product>
+    <Description>Modern, user-friendly Windows encryption software.</Description>
+    <Copyright>Copyright © 2026 Christopher Schumacher / Rice2k</Copyright>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Sodium.Core" Version="1.4.1" />
+  </ItemGroup>
+
+</Project>
