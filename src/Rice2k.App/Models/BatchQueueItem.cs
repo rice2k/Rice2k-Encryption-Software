@@ -17,6 +17,7 @@ public sealed class BatchQueueItem : INotifyPropertyChanged
     public string SourcePath { get; }
     public string FileName => Path.GetFileName(SourcePath);
     public long SizeBytes => File.Exists(SourcePath) ? new FileInfo(SourcePath).Length : 0;
+    public string SizeDisplay => FormatBytes(SizeBytes);
 
     public string Status
     {
@@ -59,4 +60,18 @@ public sealed class BatchQueueItem : INotifyPropertyChanged
 
     private void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.##} {units[unit]}";
+    }
 }
