@@ -133,14 +133,18 @@ This document tracks implementation status and the remaining release gates. A ch
 - [x] Expanded keyboard shortcut/focus foundation including F6 / Shift+F6 active-page/navigation focus movement
 - [x] Visible keyboard-focus border in the shared button template
 - [x] Startup high-contrast palette mapping to Windows system brushes
+- [x] Live Windows High Contrast changes update the shared Rice2k palette while the app is running
 - [x] App Lock screen screen-reader names, help text, and polite live status
 - [x] Operational Security Center for crypto/privacy/App Lock/vault/recovery/validation configuration status
 - [x] Security Center Refresh, Lock Rice2k, Open Settings, and `Ctrl+Shift+S` access
-- [ ] Optional recent-file history
+- [x] Optional recent-file history with explicit opt-in, bounded storage, deduplication, review, and clearing
 - [x] In-memory activity log with sensitive-data avoidance
-- [ ] Persistent activity log with explicit opt-in and sensitive-data redaction
+- [x] Persistent activity log with explicit opt-in and action-only redaction before disk storage
+- [x] Privacy Mode can clear optional recent-file and persistent activity history when enabled
+- [x] Source-controlled privacy-history tests for deduplication, redaction, clearing, and oversized-file rejection
 - [x] Basic offline/local status indicator
-- [ ] Theme and reduced-motion options
+- [x] Reduced-motion preference used by App Lock verification progress and persisted in local settings
+- [ ] Additional user-selectable theme modes beyond automatic Windows High Contrast adaptation
 - [ ] Windows notifications
 - [ ] Full keyboard-only encryption/decryption acceptance pass
 - [ ] Full screen-reader/high-contrast/text-scaling/reduced-motion review
