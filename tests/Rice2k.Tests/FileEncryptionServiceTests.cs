@@ -7,6 +7,10 @@ namespace Rice2k.Tests;
 public sealed class FileEncryptionServiceTests
 {
     private const string Password = "correct horse battery staple 2026";
+    private const int OperationsLimitOffset = 8 + 1 + 1 + 1;
+    private const int MemLimitOffset = OperationsLimitOffset + sizeof(long);
+    private const int ChunkSizeOffset = MemLimitOffset + sizeof(int);
+    private const int MetadataCipherLengthOffset = ChunkSizeOffset + sizeof(int) + 16 + 24;
     private readonly FileEncryptionService _service = new();
 
     [Fact]
@@ -132,8 +136,7 @@ public sealed class FileEncryptionServiceTests
         await _service.EncryptFileAsync(source, encrypted, Password, verifyAfterEncrypt: false);
 
         var bytes = await File.ReadAllBytesAsync(encrypted);
-        const int operationsLimitOffset = 8 + 1 + 1 + 1;
-        BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(operationsLimitOffset, sizeof(long)), 999);
+        BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(OperationsLimitOffset, sizeof(long)), 999);
         await File.WriteAllBytesAsync(encrypted, bytes);
 
         var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
@@ -141,6 +144,28 @@ public sealed class FileEncryptionServiceTests
 
         Assert.Contains("operation limit", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(File.Exists(restored));
+    }
+
+    [Fact]
+    public async Task Decrypt_ExcessiveMetadataLength_IsRejectedBeforeKeyDerivation()
+    {
+        using var temp = new TempDirectory();
+        var source = temp.PathFor("metadata-limit.bin");
+        var encrypted = temp.PathFor("metadata-limit.bin.r2kenc");
+        var restored = temp.PathFor("metadata-limit.restored.bin");
+        await File.WriteAllTextAsync(source, "metadata limit test");
+        await _service.EncryptFileAsync(source, encrypted, Password, verifyAfterEncrypt: false);
+
+        var bytes = await File.ReadAllBytesAsync(encrypted);
+        BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(MetadataCipherLengthOffset, sizeof(int)), int.MaxValue);
+        await File.WriteAllBytesAsync(encrypted, bytes);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            _service.DecryptFileAsync(encrypted, restored, Password));
+
+        Assert.Contains("metadata length", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(restored));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
     }
 
     [Fact]
