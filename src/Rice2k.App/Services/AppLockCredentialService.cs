@@ -83,9 +83,19 @@ public sealed class AppLockCredentialService
             var tempPath = _credentialPath + $".{Guid.NewGuid():N}.tmp";
             try
             {
-                File.WriteAllText(
+                using (var stream = new FileStream(
                     tempPath,
-                    JsonSerializer.Serialize(stored, new JsonSerializerOptions { WriteIndented = true }));
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None))
+                {
+                    JsonSerializer.Serialize(
+                        stream,
+                        stored,
+                        new JsonSerializerOptions { WriteIndented = true });
+                    stream.Flush(flushToDisk: true);
+                }
+
                 File.Move(tempPath, _credentialPath, overwrite: true);
             }
             finally
