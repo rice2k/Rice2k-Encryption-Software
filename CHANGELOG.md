@@ -49,21 +49,35 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Test Recovery workflow that authenticates/decrypts in memory, validates the 256-bit key, displays only the safe fingerprint, and then clears recovered key bytes.
 - Restore workflow that creates a fresh password-protected `.r2kkey` from a valid recovery package.
 - Command Center recovery-health status based on the last successful local recovery test.
-- Development format documentation for `.r2kkey`, `.r2krecovery`, and both `.r2kenc` container variants.
+- **Secure Vault v0.4 preview** with versioned `.r2kvault` containers.
+- Encrypted vault manifest containing filenames, relative paths, file sizes, timestamps, vault sequence, and entry mapping.
+- Authenticated chunked vault file contents using XChaCha20-Poly1305.
+- Vault create, unlock, explicit lock, full verification, and extraction workflows.
+- Vault Browser with add files, add folder, search, extract, rename, remove, verify, and lock actions.
+- Recursive folder intake preserving relative paths while skipping inaccessible and reparse/junction folders.
+- 10-minute inactivity auto-lock option in the Vault Browser.
+- Authenticated vault sequence numbers used to reject stale/concurrent mutation finalization.
+- Atomic vault mutation pipeline: verify current → build pending → verify pending → replace with backup → verify final.
+- Preserved `<vault>.backup` recovery copy during the final atomic replace step.
+- Recovery-backup controls to verify, restore, or move a valid backup aside.
+- Recovery restore preserves the newer active vault as a separate pre-recovery backup rather than deleting it.
+- Development format documentation for `.r2kenc`, `.r2kkey`, `.r2krecovery`, and `.r2kvault`.
 - xUnit v3 security/regression test project included in the solution.
 - Key/recovery tests covering package round trips, wrong passwords, tampering, recovery validation, and restored fingerprint preservation.
 - Password + key-file tests covering round trips, wrong-key rejection, wrong-password rejection, tampering, cancellation cleanup, fingerprint inspection, and v1 compatibility detection.
+- Vault tests covering create/unlock, add/extract, rename/remove, wrong-password rejection, tamper detection, duplicate paths, overwrite prevention, backup verification, backup restoration, and safe backup preservation.
 
 ### Changed
 
-- Windows application development version advanced to `0.3.0-preview.1`.
+- Windows application development version advanced to `0.4.0-preview.1`.
 - Encrypt/Decrypt screens hide cryptographic details behind recommended defaults instead of exposing them as required choices.
-- Encrypt now offers **Password only** and **Password + Rice2k key file** without changing existing password-only files.
+- Encrypt offers **Password only** and **Password + Rice2k key file** without changing existing password-only files.
 - Decrypt automatically distinguishes password-only `R2KENC01` containers from password + key-file `R2KENC02` containers.
 - Operation failures return users to a recoverable workflow step with plain-English guidance.
 - Dropping multiple normal files or a folder onto the main window routes them to the Batch Queue.
-- Passwords & Keys now exposes the operational Key Manager instead of only the password generator.
-- Recovery Center now exposes real package creation, testing, and restore workflows instead of a placeholder card.
+- Passwords & Keys exposes the operational Key Manager instead of only the password generator.
+- Recovery Center exposes package creation, testing, and restore workflows instead of a placeholder card.
+- Secure Vault now opens an operational Vault Browser instead of a placeholder card.
 - GitHub validation workflow builds and runs the security test project when manually dispatched and a hosted runner is available.
 
 ### Security
@@ -87,4 +101,10 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - In-memory managed keys are cleared when removed or when the Key Manager closes.
 - Workflow copies of key-file secrets and derived keys are cleared on a best-effort basis after use.
 - Recovery tests clear the temporary recovered key after fingerprint verification.
-- Security tests cover round trips, wrong passwords, wrong keys, tampering, truncation, resource-limit rejection, overwrite protection, password policy, cancellation cleanup, key packages, key-file containers, and recovery packages.
+- Vault passwords are not persisted by the vault service; unlocked sessions retain only a derived content-key copy until lock/disposal.
+- Vault manifests keep filenames and metadata encrypted at rest.
+- Vault chunk authentication binds the stable vault header, random entry ID, and sequential chunk index.
+- Vault mutations fully authenticate the current state before rewriting and fully authenticate pending/final states before releasing recovery data.
+- A pre-existing vault recovery backup blocks later mutation so possible recovery data is not silently overwritten.
+- Recovery-backup restore authenticates the candidate first and preserves the current active vault as a separate recovery artifact.
+- Security tests cover round trips, wrong passwords, wrong keys, tampering, truncation, resource-limit rejection, overwrite protection, password policy, cancellation cleanup, key packages, key-file containers, recovery packages, and vault lifecycle/recovery behavior.
