@@ -75,6 +75,7 @@ public sealed class IdentityService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        ValidateIdentityId(identity.Id);
         ValidateIdentityName(identity.Name);
         ValidateNewPassword(password);
         ValidateNewDestination(destinationPath, ".r2kid");
@@ -239,6 +240,7 @@ public sealed class IdentityService
 
             var payload = JsonSerializer.Deserialize<PrivateIdentityPayload>(plain)
                 ?? throw new InvalidDataException("The decrypted identity package is missing its identity data.");
+            ValidateIdentityId(payload.Id);
             ValidateIdentityName(payload.Name);
 
             encryptionPublic = DecodeKey(payload.EncryptionPublicKeyBase64, 32, "encryption public key");
@@ -253,7 +255,7 @@ public sealed class IdentityService
 
             return new Rice2kIdentity(
                 payload.Id,
-                payload.Name,
+                payload.Name.Trim(),
                 payload.CreatedUtc,
                 encryptionPublic,
                 encryptionPrivate,
@@ -290,6 +292,7 @@ public sealed class IdentityService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        ValidateIdentityId(identity.Id);
         ValidateIdentityName(identity.Name);
         ValidateNewDestination(destinationPath, ".r2kpub");
 
@@ -378,6 +381,7 @@ public sealed class IdentityService
 
         if (!string.Equals(card.Format, "R2KPUB1", StringComparison.Ordinal) || card.Version != 1)
             throw new NotSupportedException("This public identity format is not supported by this Rice2k build.");
+        ValidateIdentityId(card.Id);
         ValidateIdentityName(card.Name);
 
         var encryptionPublic = DecodeKey(card.EncryptionPublicKeyBase64, 32, "encryption public key");
@@ -500,6 +504,12 @@ public sealed class IdentityService
             throw new InvalidDataException($"The identity contains an invalid {label} length.");
         }
         return decoded;
+    }
+
+    private static void ValidateIdentityId(Guid id)
+    {
+        if (id == Guid.Empty)
+            throw new InvalidDataException("The Rice2k identity contains an invalid empty identifier.");
     }
 
     private static void ValidateIdentityName(string name)
