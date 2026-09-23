@@ -84,7 +84,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - **Privacy Mode** quick toggle with optional session-activity hiding and transient-preview clearing.
 - Configurable protected clipboard auto-clear: Never / 15 / 30 / 60 / 120 seconds plus Clear Clipboard Now.
 - App-wide clipboard generation and exact-value checks so older Rice2k timers do not intentionally erase newer clipboard content.
-- Protected clipboard behavior for generated passwords, text output, checksums, identity fingerprints, recipient fingerprints, and saved-contact fingerprints.
+- Protected clipboard behavior for generated passwords, text output, checksums, identity fingerprints, recipient fingerprints, saved-contact fingerprints, and copied technical-error details.
 - **Authenticated App Lock** with a separate versioned Argon2id verifier record; the raw App Lock password is not persisted.
 - App Lock startup authentication, manual Lock Rice2k action, optional lock-on-minimize, optional Windows session-lock trigger, and configurable inactivity locking.
 - App Lock lock screen with asynchronous password verification, failed-attempt throttling, explicit Exit action, and no close-button bypass.
@@ -99,13 +99,23 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - App Lock screen screen-reader names, help text, and polite live status.
 - Operational **Security Center** showing safe local application version, crypto defaults, Privacy Mode, clipboard policy, App Lock state/triggers, vault auto-lock, recovery-health metadata, and preview validation status.
 - Security Center Refresh, Lock Rice2k, and Open Settings actions with `Ctrl+Shift+S` keyboard access.
+- Static WPF preflight for WPF/WinForms namespace isolation, XAML handler resolution, duplicate lifecycle overrides, and duplicate ordinary partial-class method signatures.
 - Development format documentation for `.r2kenc`, `.r2kkey`, `.r2krecovery`, `.r2kvault`, identities, recipient encryption, and signatures.
 - xUnit v3 security/regression test project included in the solution.
 
 ### Changed
 
-- Windows application development version advanced to `0.6.0-preview.3`.
-- Main status bar reads the assembly informational version instead of relying on a hard-coded old development label for its primary status display.
+- Windows application development version advanced to `0.6.0-preview.4`.
+- Main status bar and sidebar footer read the assembly informational version instead of relying on hard-coded milestone labels.
+- Command Center security state is labeled **PREVIEW** and distinguishes configured cryptographic design from still-pending Windows release validation.
+- First-run onboarding reflects the implemented Recovery Center and warns if its completed-state preference cannot be persisted.
+- Main-window encrypt/decrypt and checksum work now participate in cancellation-aware deferred close instead of allowing application shutdown to race active file I/O.
+- Recipient Encryption preserves close intent during active work and makes recipient-card import/container inspection cancellation-aware.
+- Public Contacts and Secure Vault preserve close intent while asynchronous cleanup completes.
+- Privacy Mode reports clipboard/stored-history cleanup failure instead of silently implying cleanup succeeded.
+- Manual **Clear Clipboard Now** invalidates older Rice2k auto-clear timers through the protected clipboard generation model.
+- Stored-history clearing keeps its success/failure result visible after the history lists refresh.
+- Activity-page guidance now distinguishes default in-memory activity from explicit opt-in redacted persistent activity.
 - Encrypt/Decrypt screens hide cryptographic details behind recommended defaults instead of exposing them as required choices.
 - Encrypt offers **Password only** and **Password + Rice2k key file** without changing existing password-only files.
 - Decrypt automatically distinguishes password-only `R2KENC01` containers from password + key-file `R2KENC02` containers.
@@ -155,7 +165,9 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - A cancelled/failed Protect Folder operation removes only its own newly-created empty output when no authenticated folder data or recovery backup exists.
 - Public identity self-signatures are not described as proof of real-world identity; fingerprints must be independently compared when identity matters.
 - Recipient encryption and digital signatures remain separate so confidentiality is not mislabeled as sender authentication.
-- Protected clipboard clearing checks both app-wide generation and exact current clipboard value before clearing.
+- Protected clipboard clearing checks both app-wide generation and exact current clipboard value before clearing; manual clear advances the same app-wide generation.
+- Optional persistent activity is opt-in, bounded, and stores action/timestamp only; filenames, paths and secret values remain outside the redacted activity record.
+- Privacy Mode surfaces cleanup failure if clipboard or optional stored-history deletion cannot be completed.
 - App Lock stores only a salted Argon2id-based verifier record, bounds its KDF parameters before expensive work, and uses fixed-time verifier comparison.
 - App Lock enable/remove persistence is ordered to avoid intentionally deleting a usable credential when the disabled state cannot be saved.
 - App Lock is explicitly scoped as a same-application privacy barrier, not protection against an attacker already controlling the Windows account or local Rice2k files.
