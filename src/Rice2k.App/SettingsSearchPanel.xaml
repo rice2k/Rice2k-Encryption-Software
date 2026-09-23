@@ -5,7 +5,7 @@
         <Border Style="{StaticResource CardStyle}">
             <StackPanel>
                 <TextBlock Text="Find a setting" FontSize="18" FontWeight="SemiBold" />
-                <TextBlock Text="Search by words such as hints, tour, simple, verify, privacy, clipboard, or advanced." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,10" />
+                <TextBlock Text="Search by words such as hints, tour, simple, verify, privacy, clipboard, lock, or advanced." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,10" />
                 <TextBox x:Name="SettingsSearchBox" TextChanged="SettingsSearchBox_TextChanged" ToolTip="Search Rice2k settings" />
                 <TextBlock x:Name="SearchStatusText" Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,6,0,0" />
             </StackPanel>
@@ -43,7 +43,7 @@
             </StackPanel>
         </Border>
 
-        <Border x:Name="PrivacyCard" Style="{StaticResource CardStyle}" Tag="privacy clipboard clear lock auto lock history filenames previews recent files local offline">
+        <Border x:Name="PrivacyCard" Style="{StaticResource CardStyle}" Tag="privacy clipboard clear app lock password minimize windows session inactivity auto lock history filenames previews recent files local offline">
             <StackPanel>
                 <TextBlock Text="Privacy controls" FontSize="18" FontWeight="SemiBold" />
                 <CheckBox x:Name="PrivacyModeCheck"
@@ -80,13 +80,41 @@
                 </Grid>
                 <TextBlock Text="Auto-clear only removes a value if the clipboard still contains the exact value Rice2k copied. It will not intentionally erase something you copied afterward in another application." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0" />
 
-                <CheckBox x:Name="LockOnMinimizeCheck"
-                          Content="Lock Rice2k when the main window is minimized (coming next in v0.6)"
-                          IsEnabled="False"
-                          Foreground="{StaticResource MutedTextBrush}"
-                          Margin="0,14,0,0" />
+                <Separator Margin="0,18,0,14" />
+                <TextBlock Text="Authenticated App Lock" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="App Lock hides Rice2k behind a password screen. Once configured, Rice2k also starts locked. The app-lock password is independent from file, vault, key-package, and identity passwords."
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,10" />
+                <TextBlock x:Name="AppLockConfiguredText" Text="App Lock is not configured." FontWeight="SemiBold" Margin="0,0,0,8" />
+                <WrapPanel>
+                    <Button x:Name="ConfigureAppLockButton" Content="Set App Lock Password…" Click="ConfigureAppLock_Click" MinWidth="180" />
+                    <Button x:Name="RemoveAppLockButton" Content="Remove App Lock…" Click="RemoveAppLock_Click" Style="{StaticResource SecondaryButtonStyle}" MinWidth="150" IsEnabled="False" />
+                </WrapPanel>
 
-                <TextBlock x:Name="PrivacyStatusText" Text="Activity history remains session-only and Rice2k operates locally/offline by design." Foreground="{StaticResource SuccessBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0" />
+                <CheckBox x:Name="LockOnMinimizeCheck"
+                          Content="Lock when the main Rice2k window is minimized"
+                          Checked="AppLockPreference_Changed"
+                          Unchecked="AppLockPreference_Changed"
+                          Foreground="{StaticResource TextBrush}"
+                          Margin="0,14,0,4" />
+                <CheckBox x:Name="LockOnWindowsSessionCheck"
+                          Content="Lock when Windows reports the current session is locked"
+                          Checked="AppLockPreference_Changed"
+                          Unchecked="AppLockPreference_Changed"
+                          Foreground="{StaticResource TextBrush}" />
+
+                <TextBlock Text="Lock after no Rice2k input" FontWeight="SemiBold" Margin="0,14,0,5" />
+                <ComboBox x:Name="AppLockInactivityCombo" Width="220" HorizontalAlignment="Left" SelectionChanged="AppLockInactivity_Changed">
+                    <ComboBoxItem Content="Never" Tag="0" />
+                    <ComboBoxItem Content="1 minute" Tag="1" />
+                    <ComboBoxItem Content="5 minutes" Tag="5" />
+                    <ComboBoxItem Content="10 minutes" Tag="10" />
+                    <ComboBoxItem Content="15 minutes" Tag="15" />
+                    <ComboBoxItem Content="30 minutes" Tag="30" />
+                </ComboBox>
+                <TextBlock Text="App Lock is a local privacy barrier. Someone who already controls your Windows account or can modify Rice2k's local files is outside this feature's security boundary."
+                           Foreground="{StaticResource WarningBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
+
+                <TextBlock x:Name="PrivacyStatusText" Text="Activity history remains session-only and Rice2k operates locally/offline by design." Foreground="{StaticResource SuccessBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0" />
             </StackPanel>
         </Border>
     </StackPanel>
