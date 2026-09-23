@@ -5,13 +5,13 @@
         <Border Style="{StaticResource CardStyle}">
             <StackPanel>
                 <TextBlock Text="Find a setting" FontSize="18" FontWeight="SemiBold" />
-                <TextBlock Text="Search by words such as hints, tour, simple, verify, privacy, clipboard, lock, or advanced." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,10" />
+                <TextBlock Text="Search by words such as hints, tour, simple, verify, privacy, clipboard, lock, history, motion, or advanced." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,10" />
                 <TextBox x:Name="SettingsSearchBox" TextChanged="SettingsSearchBox_TextChanged" ToolTip="Search Rice2k settings" />
                 <TextBlock x:Name="SearchStatusText" Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,6,0,0" />
             </StackPanel>
         </Border>
 
-        <Border x:Name="ExperienceCard" Style="{StaticResource CardStyle}" Tag="hints helpful guidance tour welcome onboarding beginner simple interface">
+        <Border x:Name="ExperienceCard" Style="{StaticResource CardStyle}" Tag="hints helpful guidance tour welcome onboarding beginner simple interface accessibility motion animation reduce motion">
             <StackPanel>
                 <TextBlock Text="Guidance &amp; interface" FontSize="18" FontWeight="SemiBold" />
                 <CheckBox x:Name="HelpfulHintsCheck"
@@ -21,6 +21,13 @@
                           Foreground="{StaticResource TextBrush}"
                           Margin="0,12,0,5" />
                 <TextBlock Text="Hints explain what actions do without exposing unnecessary cryptographic terminology." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
+                <CheckBox x:Name="ReduceMotionCheck"
+                          Content="Reduce motion and avoid nonessential indeterminate animation"
+                          Checked="ReduceMotion_Changed"
+                          Unchecked="ReduceMotion_Changed"
+                          Foreground="{StaticResource TextBrush}"
+                          Margin="0,12,0,5" />
+                <TextBlock Text="Rice2k will prefer static progress/status presentation where it controls animation. This preference does not override Windows accessibility settings." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
                 <Button Content="Replay welcome tour" Click="ReplayTour_Click" Width="170" HorizontalAlignment="Left" Style="{StaticResource SecondaryButtonStyle}" Margin="0,12,0,0" />
                 <TextBlock x:Name="PreferenceStatusText" Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,6,0,0" />
             </StackPanel>
@@ -43,7 +50,7 @@
             </StackPanel>
         </Border>
 
-        <Border x:Name="PrivacyCard" Style="{StaticResource CardStyle}" Tag="privacy clipboard clear app lock password minimize windows session inactivity auto lock history filenames previews recent files local offline">
+        <Border x:Name="PrivacyCard" Style="{StaticResource CardStyle}" Tag="privacy clipboard clear app lock password minimize windows session inactivity auto lock history filenames previews recent files persistent activity local offline">
             <StackPanel>
                 <TextBlock Text="Privacy controls" FontSize="18" FontWeight="SemiBold" />
                 <CheckBox x:Name="PrivacyModeCheck"
@@ -65,6 +72,27 @@
                           Checked="PrivacyPreference_Changed"
                           Unchecked="PrivacyPreference_Changed"
                           Foreground="{StaticResource TextBrush}" />
+                <CheckBox x:Name="ClearDiskHistoryCheck"
+                          Content="Clear optional recent-file and persistent activity history when Privacy Mode turns on"
+                          Checked="PrivacyPreference_Changed"
+                          Unchecked="PrivacyPreference_Changed"
+                          Foreground="{StaticResource TextBrush}"
+                          Margin="0,4,0,0" />
+
+                <TextBlock Text="Optional local history" FontWeight="SemiBold" Margin="0,16,0,5" />
+                <CheckBox x:Name="RememberRecentFilesCheck"
+                          Content="Remember recent files on this Windows account"
+                          Checked="PrivacyPreference_Changed"
+                          Unchecked="PrivacyPreference_Changed"
+                          Foreground="{StaticResource TextBrush}" />
+                <TextBlock Text="Off by default. When enabled, recent-file history stores full local paths so you can recognize files later." Foreground="{StaticResource WarningBrush}" FontSize="12" TextWrapping="Wrap" Margin="20,3,0,7" />
+                <CheckBox x:Name="PersistentActivityCheck"
+                          Content="Save a persistent redacted activity log"
+                          Checked="PrivacyPreference_Changed"
+                          Unchecked="PrivacyPreference_Changed"
+                          Foreground="{StaticResource TextBrush}" />
+                <TextBlock Text="Off by default. Persistent activity stores only action names and timestamps. Rice2k excludes filenames, paths, plaintext, passwords, keys, and recovery secrets from this log." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="20,3,0,8" />
+                <Button Content="Review / clear stored history…" Click="ReviewStoredHistory_Click" Style="{StaticResource SecondaryButtonStyle}" Width="220" HorizontalAlignment="Left" />
 
                 <TextBlock Text="Clipboard auto-clear" FontWeight="SemiBold" Margin="0,16,0,5" />
                 <Grid>
@@ -114,7 +142,7 @@
                 <TextBlock Text="App Lock is a local privacy barrier. Someone who already controls your Windows account or can modify Rice2k's local files is outside this feature's security boundary."
                            Foreground="{StaticResource WarningBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
 
-                <TextBlock x:Name="PrivacyStatusText" Text="Activity history remains session-only and Rice2k operates locally/offline by design." Foreground="{StaticResource SuccessBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0" />
+                <TextBlock x:Name="PrivacyStatusText" Text="Session activity remains in-memory unless you explicitly enable redacted persistent logging. Rice2k operates locally/offline by design." Foreground="{StaticResource SuccessBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0" />
             </StackPanel>
         </Border>
     </StackPanel>
