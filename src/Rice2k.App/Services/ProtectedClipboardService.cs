@@ -5,7 +5,7 @@ namespace Rice2k.Encryption.Services;
 public sealed class ProtectedClipboardService
 {
     private readonly AppSettingsService _settingsService;
-    private long _generation;
+    private static long _globalGeneration;
 
     public ProtectedClipboardService(AppSettingsService? settingsService = null)
     {
@@ -18,6 +18,7 @@ public sealed class ProtectedClipboardService
             return;
 
         Clipboard.SetText(value);
+        var generation = Interlocked.Increment(ref _globalGeneration);
         var seconds = _settingsService.Load().ClipboardAutoClearSeconds;
         if (seconds <= 0)
         {
@@ -25,14 +26,13 @@ public sealed class ProtectedClipboardService
             return;
         }
 
-        var generation = Interlocked.Increment(ref _generation);
         status?.Invoke($"Copied to clipboard. Rice2k will clear this value in {seconds} seconds if it is still unchanged.");
         _ = ClearLaterAsync(value, seconds, generation, status);
     }
 
     public bool ClearNow()
     {
-        Interlocked.Increment(ref _generation);
+        Interlocked.Increment(ref _globalGeneration);
         try
         {
             Clipboard.Clear();
@@ -44,12 +44,12 @@ public sealed class ProtectedClipboardService
         }
     }
 
-    private async Task ClearLaterAsync(string expectedValue, int seconds, long generation, Action<string>? status)
+    private static async Task ClearLaterAsync(string expectedValue, int seconds, long generation, Action<string>? status)
     {
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(seconds));
-            if (generation != Interlocked.Read(ref _generation))
+            if (generation != Interlocked.Read(ref _globalGeneration))
                 return;
 
             var dispatcher = Application.Current?.Dispatcher;
