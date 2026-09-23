@@ -109,9 +109,18 @@ This document tracks implementation status and the remaining release gates. A ch
 
 ## Milestone 0.6 — Privacy and operational polish
 
-- [ ] Privacy Mode
-- [ ] Clipboard auto-clear timer
-- [ ] App lock on minimize / Windows lock
+- [x] Privacy Mode quick toggle
+- [x] Privacy Mode can hide/clear session Activity entries
+- [x] Privacy Mode can clear transient text/password/generated-password previews when enabled
+- [x] Persisted Privacy Mode preferences in the non-secret application settings file
+- [x] Configurable clipboard auto-clear: Never / 15 / 30 / 60 / 120 seconds
+- [x] Clear Clipboard Now action
+- [x] Exact-value clipboard ownership check so Rice2k does not intentionally erase newer clipboard content
+- [x] App-wide clipboard generation so a newer Rice2k copy supersedes older timers across windows
+- [x] Protected clipboard integration for main text/password/checksum copies and identity/contact/recipient fingerprints
+- [ ] Authenticated app lock on minimize
+- [ ] App lock on Windows session lock
+- [ ] Configurable main-application inactivity lock
 - [ ] Optional recent-file history
 - [x] In-memory activity log with sensitive-data avoidance
 - [ ] Persistent activity log with explicit opt-in and sensitive-data redaction
@@ -119,6 +128,8 @@ This document tracks implementation status and the remaining release gates. A ch
 - [x] Basic offline/local status indicator
 - [ ] Theme and reduced-motion options
 - [ ] Windows notifications
+- [ ] Full keyboard-only encryption/decryption acceptance pass
+- [ ] Full screen-reader/high-contrast/text-scaling/reduced-motion review
 
 ## Milestone 0.7 — Interoperability and advanced controls
 
