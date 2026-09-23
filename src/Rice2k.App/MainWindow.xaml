@@ -31,6 +31,7 @@
                     <TextBlock Text="PROTECT" FontSize="11" Foreground="{StaticResource MutedTextBrush}" Margin="8,14,0,5" />
                     <Button Content="🔒  Encrypt File" Tag="Encrypt" Click="Navigate_Click" Style="{StaticResource NavButtonStyle}" />
                     <Button Content="🔓  Decrypt File" Tag="Decrypt" Click="Navigate_Click" Style="{StaticResource NavButtonStyle}" />
+                    <Button Content="▤  Batch Queue" Click="OpenBatchQueue_Click" Style="{StaticResource NavButtonStyle}" />
                     <Button Content="Aa  Text Encryption" Tag="Text" Click="Navigate_Click" Style="{StaticResource NavButtonStyle}" />
                     <Button Content="▣  Secure Vault" Tag="Vault" Click="Navigate_Click" Style="{StaticResource NavButtonStyle}" />
 
@@ -85,6 +86,7 @@
                     <WrapPanel>
                         <Button Content="🔒  Encrypt a file" Tag="Encrypt" Click="QuickNavigate_Click" Width="190" Height="54" Margin="0,0,12,12" />
                         <Button Content="🔓  Decrypt a file" Tag="Decrypt" Click="QuickNavigate_Click" Width="190" Height="54" Margin="0,0,12,12" />
+                        <Button Content="▤  Batch files" Click="OpenBatchQueue_Click" Width="190" Height="54" Margin="0,0,12,12" />
                         <Button Content="Aa  Protect text" Tag="Text" Click="QuickNavigate_Click" Width="190" Height="54" Margin="0,0,12,12" />
                         <Button Content="✓  Check a file" Tag="Integrity" Click="QuickNavigate_Click" Width="190" Height="54" Margin="0,0,12,12" />
                     </WrapPanel>
@@ -175,7 +177,6 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="145"/><ColumnDefinition/></Grid.ColumnDefinitions>
                                 <TextBlock Text="File" Foreground="{StaticResource MutedTextBrush}" />
                                 <TextBlock x:Name="EncryptReviewFileText" Grid.Column="1" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                <TextBlock Grid.Row="1" Text="" />
                             </Grid>
                             <TextBlock x:Name="EncryptReviewSizeText" Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,12" />
 
