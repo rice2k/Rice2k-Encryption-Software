@@ -118,6 +118,71 @@ public sealed class RecipientFileEncryptionServiceTests
     }
 
     [Fact]
+    public async Task RecipientFingerprint_MustMatchSuppliedPublicKeys()
+    {
+        using var temp = new TempDirectory();
+        var identities = new IdentityService();
+        var service = new RecipientFileEncryptionService();
+        using var alice = identities.Generate("Alice");
+        using var bob = identities.Generate("Bob");
+        var source = temp.PathFor("fingerprint.txt");
+        var encrypted = temp.PathFor("fingerprint.txt.r2kenc");
+        await File.WriteAllTextAsync(source, "data");
+
+        var malformed = alice.ToPublicIdentity() with { Fingerprint = bob.Fingerprint };
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.EncryptForRecipientAsync(source, encrypted, malformed));
+
+        Assert.Contains("fingerprint", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(encrypted));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
+    }
+
+    [Fact]
+    public async Task RecipientFingerprint_OverMaximumLength_IsRejectedBeforeOutput()
+    {
+        using var temp = new TempDirectory();
+        var identities = new IdentityService();
+        var service = new RecipientFileEncryptionService();
+        using var alice = identities.Generate("Alice");
+        var source = temp.PathFor("long-fingerprint.txt");
+        var encrypted = temp.PathFor("long-fingerprint.txt.r2kenc");
+        await File.WriteAllTextAsync(source, "data");
+
+        var malformed = alice.ToPublicIdentity() with { Fingerprint = new string('A', 101) };
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.EncryptForRecipientAsync(source, encrypted, malformed));
+
+        Assert.False(File.Exists(encrypted));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
+    }
+
+    [Fact]
+    public async Task DuplicateRecipientIdentifier_IsRejectedBeforeOutput()
+    {
+        using var temp = new TempDirectory();
+        var identities = new IdentityService();
+        var service = new RecipientFileEncryptionService();
+        using var alice = identities.Generate("Alice");
+        using var bob = identities.Generate("Bob");
+        var source = temp.PathFor("duplicate-id.txt");
+        var encrypted = temp.PathFor("duplicate-id.txt.r2kenc");
+        await File.WriteAllTextAsync(source, "data");
+
+        var publicAlice = alice.ToPublicIdentity();
+        var duplicateIdBob = bob.ToPublicIdentity() with { Id = publicAlice.Id };
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.EncryptForRecipientsAsync(source, encrypted, [publicAlice, duplicateIdBob]));
+
+        Assert.Contains("identifier", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(encrypted));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
+    }
+
+    [Fact]
     public async Task PreCancelledEncryption_LeavesNoFinalOrPartialOutput()
     {
         using var temp = new TempDirectory();
