@@ -41,6 +41,17 @@ public partial class SettingsSearchPanel
             _loading = false;
         }
 
+        // These three controls were originally wired in XAML to the broad
+        // PrivacyPreference_Changed handler. Detach that legacy handler before
+        // attaching the dedicated history handler so one click results in one
+        // coherent settings write/callback with the new history values.
+        RememberRecentFilesCheck.Checked -= PrivacyPreference_Changed;
+        RememberRecentFilesCheck.Unchecked -= PrivacyPreference_Changed;
+        PersistentActivityCheck.Checked -= PrivacyPreference_Changed;
+        PersistentActivityCheck.Unchecked -= PrivacyPreference_Changed;
+        ClearDiskHistoryCheck.Checked -= PrivacyPreference_Changed;
+        ClearDiskHistoryCheck.Unchecked -= PrivacyPreference_Changed;
+
         RememberRecentFilesCheck.Checked += OptionalHistoryPreference_Changed;
         RememberRecentFilesCheck.Unchecked += OptionalHistoryPreference_Changed;
         PersistentActivityCheck.Checked += OptionalHistoryPreference_Changed;
