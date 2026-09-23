@@ -68,11 +68,19 @@ public sealed class AppSettingsService
                 _settingsDirectory,
                 $"settings.{Guid.NewGuid():N}.tmp");
 
-            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions
+            using (var stream = new FileStream(
+                tempPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None))
             {
-                WriteIndented = true
-            });
-            File.WriteAllText(tempPath, json);
+                JsonSerializer.Serialize(
+                    stream,
+                    settings,
+                    new JsonSerializerOptions { WriteIndented = true });
+                stream.Flush(flushToDisk: true);
+            }
+
             File.Move(tempPath, _settingsPath, overwrite: true);
             return true;
         }
