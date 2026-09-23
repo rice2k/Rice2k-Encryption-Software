@@ -1,0 +1,129 @@
+<Window x:Class="Rice2k.Encryption.RecipientEncryptionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rice2k Recipient Encryption"
+        Width="1020" Height="760"
+        MinWidth="860" MinHeight="620"
+        WindowStartupLocation="CenterOwner"
+        Closing="Window_Closing">
+    <Grid Margin="24">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Recipient Encryption" FontSize="30" FontWeight="SemiBold" />
+            <TextBlock Text="Encrypt a file so only selected Rice2k private identities can unlock it. Recipient encryption does not authenticate who sent the file; use a digital signature when sender authenticity matters."
+                       Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+        </StackPanel>
+
+        <TabControl Grid.Row="1">
+            <TabItem Header="Encrypt for recipients">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="File to protect" FontSize="18" FontWeight="SemiBold" />
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="EncryptSourceBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Browse…" Click="BrowseEncryptSource_Click" Margin="10,0,0,0" />
+                                </Grid>
+                                <TextBlock Text="Encrypted output" Margin="0,12,0,4" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="EncryptDestinationBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Choose location…" Click="BrowseEncryptDestination_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Recipients" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock Text="Import shareable .r2kpub cards. A valid card proves its key material is internally consistent, but the display name is not trusted until you independently compare its fingerprint."
+                                           Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,5,0,10" />
+                                <ListView x:Name="RecipientsList" Height="150" SelectionMode="Single" AutomationProperties.Name="Selected recipient public identities">
+                                    <ListView.View>
+                                        <GridView>
+                                            <GridViewColumn Header="Name label" DisplayMemberBinding="{Binding Name}" Width="170" />
+                                            <GridViewColumn Header="Fingerprint" DisplayMemberBinding="{Binding Fingerprint}" Width="430" />
+                                            <GridViewColumn Header="Created" DisplayMemberBinding="{Binding CreatedDisplay}" Width="150" />
+                                        </GridView>
+                                    </ListView.View>
+                                </ListView>
+                                <WrapPanel Margin="0,10,0,0">
+                                    <Button Content="Add Public Identity…" Click="AddRecipient_Click" />
+                                    <Button Content="Remove Selected" Click="RemoveRecipient_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button Content="Copy Fingerprint" Click="CopyRecipientFingerprint_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock x:Name="EncryptStatusText" Text="Ready" FontWeight="SemiBold" />
+                                <ProgressBar x:Name="EncryptProgressBar" Minimum="0" Maximum="100" Value="0" Height="12" Margin="0,8,0,6" />
+                                <TextBlock x:Name="EncryptProgressDetailText" Text="Choose a file and at least one recipient." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="EncryptCancelButton" Content="Cancel safely" Click="Cancel_Click" Style="{StaticResource SecondaryButtonStyle}" Visibility="Collapsed" IsEnabled="False" />
+                            <Button x:Name="EncryptStartButton" Content="🔒 Encrypt for Recipients" Click="EncryptForRecipients_Click" MinWidth="190" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Open recipient file">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Recipient-encrypted file" FontSize="18" FontWeight="SemiBold" />
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="DecryptSourceBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Browse…" Click="BrowseDecryptSource_Click" Margin="10,0,0,0" />
+                                </Grid>
+                                <TextBlock x:Name="RecipientCountText" Text="No R2KENC03 file selected" Foreground="{StaticResource MutedTextBrush}" Margin="0,7,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Private identity" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock Text="Choose your password-protected .r2kid. Rice2k tries its private encryption key against the anonymous wrapped recipient keys; recipient names are not exposed in the public file header."
+                                           Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,5,0,10" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="PrivateIdentityBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Choose .r2kid…" Click="BrowsePrivateIdentity_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                                </Grid>
+                                <Label Content="Identity package password" Margin="0,12,0,0" />
+                                <PasswordBox x:Name="PrivateIdentityPasswordBox" />
+                                <TextBlock Text="Restored output" Margin="0,12,0,4" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="DecryptDestinationBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Choose location…" Click="BrowseDecryptDestination_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock x:Name="DecryptStatusText" Text="Ready" FontWeight="SemiBold" />
+                                <ProgressBar x:Name="DecryptProgressBar" Minimum="0" Maximum="100" Value="0" Height="12" Margin="0,8,0,6" />
+                                <TextBlock x:Name="DecryptProgressDetailText" Text="Choose a recipient-encrypted file and your private identity." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="DecryptCancelButton" Content="Cancel safely" Click="Cancel_Click" Style="{StaticResource SecondaryButtonStyle}" Visibility="Collapsed" IsEnabled="False" />
+                            <Button x:Name="DecryptStartButton" Content="🔓 Open Recipient File" Click="DecryptRecipientFile_Click" MinWidth="190" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
