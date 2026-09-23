@@ -8,7 +8,7 @@
         Loaded="Window_Loaded"
         PreviewMouseMove="Window_MouseActivity"
         PreviewKeyDown="Window_KeyActivity"
-        Closing="Window_Closing">
+        Closing="Window_ClosingEnhanced">
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -71,7 +71,7 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <Button Content="Verify Vault" Click="VerifyVaultDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" AutomationProperties.HelpText="Authenticate the vault manifest and all encrypted file chunks" />
-                                <Button Content="Lock" Click="LockVault_Click" Style="{StaticResource SecondaryButtonStyle}" MinWidth="90" AutomationProperties.HelpText="Clear the in-memory vault key and decrypted file listing" />
+                                <Button Content="Lock" Click="LockVaultSafe_Click" Style="{StaticResource SecondaryButtonStyle}" MinWidth="90" AutomationProperties.HelpText="Clear the in-memory vault key and decrypted file listing" />
                             </StackPanel>
                         </Grid>
 
