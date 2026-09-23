@@ -37,6 +37,8 @@ public sealed class FileSignatureService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        if (identity.Id == Guid.Empty)
+            throw new InvalidDataException("The signing identity contains an invalid empty identifier.");
         if (!File.Exists(sourcePath))
             throw new FileNotFoundException("The file to sign could not be found.", sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
@@ -241,6 +243,8 @@ public sealed class FileSignatureService
     {
         if (!string.Equals(document.Format, Format, StringComparison.Ordinal) || document.Version != Version)
             throw new NotSupportedException("This Rice2k signature format is not supported by this build.");
+        if (document.SignerIdentityId == Guid.Empty)
+            throw new InvalidDataException("The signature contains an invalid empty signer identifier.");
         if (!string.Equals(document.HashAlgorithm, "SHA-512", StringComparison.Ordinal))
             throw new NotSupportedException("This Rice2k signature uses an unsupported file-hash algorithm.");
         if (string.IsNullOrWhiteSpace(document.SignerName) || document.SignerName.Length > MaximumSignerNameLength)
