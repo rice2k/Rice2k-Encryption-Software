@@ -60,9 +60,16 @@ public partial class MainWindow
     private void PrivacyQuickToggle_Click(object sender, RoutedEventArgs e)
     {
         var updated = _privacySettings with { PrivacyModeEnabled = !_privacySettings.PrivacyModeEnabled };
-        _appSettingsService.TrySave(updated);
+        var saved = _appSettingsService.TrySave(updated);
         ApplyPrivacySettings(updated);
         SyncPrivacySettingsPanel(updated);
+
+        if (!saved)
+        {
+            GlobalStatusText.Text += updated.PrivacyModeEnabled
+                ? "   |   ⚠ preference not saved; Privacy Mode is session-only"
+                : "   |   ⚠ preference not saved; previous saved setting may return next launch";
+        }
     }
 
     private void ApplyPrivacySettings(Rice2kAppSettings settings)
@@ -82,19 +89,36 @@ public partial class MainWindow
             ActivityList.Visibility = Visibility.Visible;
         }
 
+        bool? clipboardCleared = null;
+        bool? diskHistoryCleared = null;
         if (enablingNow && settings.ClearSensitivePreviewsWhenPrivacyModeStarts)
-            ClearTransientSensitivePreviews();
+            clipboardCleared = ClearTransientSensitivePreviews();
 
         if (enablingNow && settings.ClearDiskHistoryWhenPrivacyModeStarts)
-            _privacyHistoryService.TryClearAll();
+            diskHistoryCleared = _privacyHistoryService.TryClearAll();
 
         RefreshPrivacyQuickToggle();
         ApplyAppLockSettings(settings);
         if (_privacyUiInitialized)
         {
-            GlobalStatusText.Text = settings.PrivacyModeEnabled
-                ? "● Privacy Mode ON   |   Local / offline"
-                : "● Privacy Mode OFF   |   Local / offline";
+            if (settings.PrivacyModeEnabled && clipboardCleared == false && diskHistoryCleared == false)
+            {
+                GlobalStatusText.Text = "⚠ Privacy Mode ON, but Rice2k could not clear the Windows clipboard or all stored history. Review Stored History and clear the clipboard manually.";
+            }
+            else if (settings.PrivacyModeEnabled && clipboardCleared == false)
+            {
+                GlobalStatusText.Text = "⚠ Privacy Mode ON, but Windows clipboard clearing failed. Clear the clipboard manually if it may contain sensitive data.";
+            }
+            else if (settings.PrivacyModeEnabled && diskHistoryCleared == false)
+            {
+                GlobalStatusText.Text = "⚠ Privacy Mode ON, but stored Rice2k history could not be fully cleared. Review Stored History in Settings.";
+            }
+            else
+            {
+                GlobalStatusText.Text = settings.PrivacyModeEnabled
+                    ? "● Privacy Mode ON   |   Local / offline"
+                    : "● Privacy Mode OFF   |   Local / offline";
+            }
         }
     }
 
@@ -106,7 +130,7 @@ public partial class MainWindow
             panel.RefreshPrivacySettings(settings);
     }
 
-    private void ClearTransientSensitivePreviews()
+    private bool ClearTransientSensitivePreviews()
     {
         TextInputBox.Clear();
         TextOutputBox.Clear();
@@ -116,7 +140,7 @@ public partial class MainWindow
         EncryptConfirmPasswordBox.Clear();
         DecryptPasswordBox.Clear();
         ActivityList.Items.Clear();
-        _mainProtectedClipboard.ClearNow();
+        return _mainProtectedClipboard.ClearNow();
     }
 
     private void RefreshPrivacyQuickToggle()
