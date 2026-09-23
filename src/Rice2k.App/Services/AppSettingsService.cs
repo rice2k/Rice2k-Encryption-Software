@@ -9,7 +9,12 @@ public sealed record Rice2kAppSettings(
     string? LastRecoveryFingerprint = null,
     string? LastRecoveryKeyName = null,
     bool? VaultAutoLockEnabled = null,
-    int? VaultAutoLockMinutes = null);
+    int? VaultAutoLockMinutes = null,
+    bool PrivacyModeEnabled = false,
+    int ClipboardAutoClearSeconds = 30,
+    bool HideActivityInPrivacyMode = true,
+    bool ClearSensitivePreviewsWhenPrivacyModeStarts = true,
+    bool LockOnMinimize = false);
 
 public sealed class AppSettingsService
 {
@@ -29,22 +34,23 @@ public sealed class AppSettingsService
         try
         {
             if (!File.Exists(_settingsPath))
-                return new Rice2kAppSettings();
+                return Normalize(new Rice2kAppSettings());
 
             var json = File.ReadAllText(_settingsPath);
-            return JsonSerializer.Deserialize<Rice2kAppSettings>(json)
-                ?? new Rice2kAppSettings();
+            return Normalize(JsonSerializer.Deserialize<Rice2kAppSettings>(json)
+                ?? new Rice2kAppSettings());
         }
         catch
         {
             // Preferences must never stop the encryption application from opening.
-            return new Rice2kAppSettings();
+            return Normalize(new Rice2kAppSettings());
         }
     }
 
     public bool TrySave(Rice2kAppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        settings = Normalize(settings);
         string? tempPath = null;
 
         try
@@ -82,5 +88,13 @@ public sealed class AppSettingsService
                 }
             }
         }
+    }
+
+    private static Rice2kAppSettings Normalize(Rice2kAppSettings settings)
+    {
+        var clipboardSeconds = settings.ClipboardAutoClearSeconds is 0 or 15 or 30 or 60 or 120
+            ? settings.ClipboardAutoClearSeconds
+            : 30;
+        return settings with { ClipboardAutoClearSeconds = clipboardSeconds };
     }
 }
