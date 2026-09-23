@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using Rice2k.Encryption.Services;
 
 namespace Rice2k.Encryption;
@@ -15,7 +14,7 @@ public partial class SettingsSearchPanel
         if (_clipboardClearHardeningInitialized)
             return;
 
-        var clearButton = FindSettingsVisualChildren<Button>(this)
+        var clearButton = FindSettingsLogicalChildren<Button>(this)
             .FirstOrDefault(button => string.Equals(button.Content?.ToString(), "Clear Clipboard Now", StringComparison.Ordinal));
         if (clearButton is null)
             return;
@@ -32,18 +31,15 @@ public partial class SettingsSearchPanel
             : "⚠ Windows clipboard could not be cleared. Try again or clear it from Windows/another application.";
     }
 
-    private static IEnumerable<T> FindSettingsVisualChildren<T>(DependencyObject root) where T : DependencyObject
+    private static IEnumerable<T> FindSettingsLogicalChildren<T>(DependencyObject root) where T : DependencyObject
     {
-        if (root is null)
-            yield break;
-
-        var count = VisualTreeHelper.GetChildrenCount(root);
-        for (var index = 0; index < count; index++)
+        foreach (var child in LogicalTreeHelper.GetChildren(root))
         {
-            var child = VisualTreeHelper.GetChild(root, index);
             if (child is T match)
                 yield return match;
-            foreach (var descendant in FindSettingsVisualChildren<T>(child))
+            if (child is not DependencyObject dependencyChild)
+                continue;
+            foreach (var descendant in FindSettingsLogicalChildren<T>(dependencyChild))
                 yield return descendant;
         }
     }
