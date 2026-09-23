@@ -32,7 +32,7 @@ public sealed class PrivacyHistoryServiceTests
 
         var item = Assert.Single(service.LoadActivity());
         Assert.Equal("Encryption complete", item.Action);
-        Assert.DoesNotContain("secret-finances.pdf", item.Action, StringComparison.OrdinalIgnoreCase);
+        Assert.False(item.Action.Contains("secret-finances.pdf", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
