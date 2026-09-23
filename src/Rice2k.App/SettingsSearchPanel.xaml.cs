@@ -28,6 +28,27 @@ public partial class SettingsSearchPanel : UserControl
         ApplySearch();
     }
 
+    public void RefreshPrivacySettings(Rice2kAppSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        _loading = true;
+        try
+        {
+            PrivacyModeCheck.IsChecked = settings.PrivacyModeEnabled;
+            HideActivityCheck.IsChecked = settings.HideActivityInPrivacyMode;
+            ClearPreviewsCheck.IsChecked = settings.ClearSensitivePreviewsWhenPrivacyModeStarts;
+            LockOnMinimizeCheck.IsChecked = settings.LockOnMinimize;
+            SelectClipboardSeconds(settings.ClipboardAutoClearSeconds);
+            PrivacyStatusText.Text = settings.PrivacyModeEnabled
+                ? "Privacy Mode is on. Session activity is hidden according to your selected privacy options."
+                : "Privacy Mode is off. Clipboard protection remains controlled separately below.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
     private void LoadSettings()
     {
         _loading = true;
