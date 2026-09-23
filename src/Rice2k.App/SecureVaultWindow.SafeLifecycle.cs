@@ -5,6 +5,10 @@ namespace Rice2k.Encryption;
 
 public partial class SecureVaultWindow
 {
+    private bool _closeVaultWhenFinished;
+    private bool _vaultCloseWaitStarted;
+    private bool _vaultCloseApproved;
+
     private void LockVaultSafe_Click(object sender, RoutedEventArgs e)
     {
         if (_busy)
@@ -18,9 +22,16 @@ public partial class SecureVaultWindow
 
     private void Window_ClosingEnhanced(object? sender, CancelEventArgs e)
     {
+        if (_vaultCloseApproved)
+        {
+            Window_Closing(sender, e);
+            return;
+        }
+
         if (_busy)
         {
             e.Cancel = true;
+            _closeVaultWhenFinished = true;
 
             if (_vaultOperationCts is not null && !_vaultOperationCts.IsCancellationRequested)
             {
@@ -32,12 +43,37 @@ public partial class SecureVaultWindow
             else
             {
                 VaultOperationText.Text = "Operation still finishing…";
-                VaultDetailText.Text = "The Vault window will remain open until the current non-cancellable operation finishes safely.";
+                VaultDetailText.Text = "The Vault window will close automatically after the current non-cancellable operation finishes safely.";
             }
 
+            if (!_vaultCloseWaitStarted)
+            {
+                _vaultCloseWaitStarted = true;
+                _ = CompleteVaultCloseAfterOperationAsync();
+            }
             return;
         }
 
         Window_Closing(sender, e);
+    }
+
+    private async Task CompleteVaultCloseAfterOperationAsync()
+    {
+        try
+        {
+            while (_busy && !Dispatcher.HasShutdownStarted)
+                await Task.Delay(100);
+        }
+        finally
+        {
+            _vaultCloseWaitStarted = false;
+        }
+
+        if (!_closeVaultWhenFinished || Dispatcher.HasShutdownStarted)
+            return;
+
+        _closeVaultWhenFinished = false;
+        _vaultCloseApproved = true;
+        Dispatcher.BeginInvoke(new Action(Close));
     }
 }
