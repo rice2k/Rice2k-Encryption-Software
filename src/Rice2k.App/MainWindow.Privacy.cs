@@ -7,12 +7,12 @@ namespace Rice2k.Encryption;
 
 public partial class MainWindow
 {
+    private readonly ProtectedClipboardService _mainProtectedClipboard = new();
     private Rice2kAppSettings _privacySettings = new();
     private Button? _privacyQuickButton;
     private DispatcherTimer? _privacyScrubTimer;
     private bool _privacyUiInitialized;
     private bool _privacyWasEnabled;
-    private long _clipboardGeneration;
 
     private void InitializePrivacyUi()
     {
@@ -111,10 +111,8 @@ public partial class MainWindow
         EncryptPasswordBox.Clear();
         EncryptConfirmPasswordBox.Clear();
         DecryptPasswordBox.Clear();
-
         ActivityList.Items.Clear();
-        Interlocked.Increment(ref _clipboardGeneration);
-        TryClearClipboardNow();
+        _mainProtectedClipboard.ClearNow();
     }
 
     private void RefreshPrivacyQuickToggle()
@@ -128,7 +126,7 @@ public partial class MainWindow
 
     private void MainWindow_PrivacyAwareButtonClick(object sender, RoutedEventArgs e)
     {
-        if (e.Source is not Button button || _privacySettings.ClipboardAutoClearSeconds <= 0)
+        if (e.Source is not Button button)
             return;
 
         var label = button.Content?.ToString() ?? string.Empty;
@@ -143,57 +141,13 @@ public partial class MainWindow
         if (string.IsNullOrEmpty(copiedValue))
             return;
 
-        ScheduleClipboardClear(copiedValue, _privacySettings.ClipboardAutoClearSeconds);
-    }
-
-    private void ScheduleClipboardClear(string expectedValue, int seconds)
-    {
-        var generation = Interlocked.Increment(ref _clipboardGeneration);
-        _ = ClearClipboardLaterAsync(expectedValue, seconds, generation);
-    }
-
-    private async Task ClearClipboardLaterAsync(string expectedValue, int seconds, long generation)
-    {
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(seconds));
-            if (generation != Interlocked.Read(ref _clipboardGeneration))
-                return;
-
-            await Dispatcher.InvokeAsync(() =>
-            {
-                try
-                {
-                    if (!Clipboard.ContainsText())
-                        return;
-                    var current = Clipboard.GetText();
-                    if (!string.Equals(current, expectedValue, StringComparison.Ordinal))
-                        return;
-
-                    Clipboard.Clear();
-                    GlobalStatusText.Text = "● Clipboard auto-cleared   |   Local / offline";
-                }
-                catch
-                {
-                    // Clipboard access is best effort because another process can own it temporarily.
-                }
-            });
+            _mainProtectedClipboard.CopyText(copiedValue, message => GlobalStatusText.Text = $"● {message}");
         }
         catch
         {
-            // The privacy timer must never crash the application.
-        }
-    }
-
-    private void TryClearClipboardNow()
-    {
-        try
-        {
-            Clipboard.Clear();
-        }
-        catch
-        {
-            // Best effort only; Windows clipboard ownership can be transient.
+            // The source command already reports ordinary clipboard-access failures.
         }
     }
 
