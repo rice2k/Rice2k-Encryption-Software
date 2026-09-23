@@ -25,6 +25,8 @@ public sealed class FileEncryptionService
     private const int MaximumSupportedChunkSize = 64 * 1024 * 1024;
     private const int MaximumMetadataCipherLength = 64 * 1024;
 
+    private readonly AsyncPauseGate _pauseGate = new();
+
     private sealed record FileMetadata(
         string OriginalName,
         long OriginalLength,
@@ -41,6 +43,12 @@ public sealed class FileEncryptionService
         byte[] MetadataCipher,
         byte[] HeaderAuthenticationData);
 
+    public bool IsPaused => _pauseGate.IsPaused;
+
+    public void Pause() => _pauseGate.Pause();
+
+    public void Resume() => _pauseGate.Resume();
+
     public async Task EncryptFileAsync(
         string sourcePath,
         string destinationPath,
@@ -50,6 +58,7 @@ public sealed class FileEncryptionService
         bool verifyAfterEncrypt = true)
     {
         ValidateSourceAndDestination(sourcePath, destinationPath, password, requireStrongPassword: true);
+        _pauseGate.Resume();
 
         var sourceInfo = new FileInfo(sourcePath);
         var tempPath = CreateUniqueTempPath(destinationPath);
@@ -122,7 +131,9 @@ public sealed class FileEncryptionService
                 {
                     while (true)
                     {
+                        await _pauseGate.WaitIfPausedAsync(cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
+
                         var read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
                         if (read == 0)
                             break;
@@ -155,16 +166,19 @@ public sealed class FileEncryptionService
                     CryptographicOperations.ZeroMemory(buffer);
                 }
 
+                await _pauseGate.WaitIfPausedAsync(cancellationToken);
                 await output.FlushAsync(cancellationToken);
                 output.Flush(flushToDisk: true);
             }
 
             if (verifyAfterEncrypt)
             {
+                await _pauseGate.WaitIfPausedAsync(cancellationToken);
                 Report(progress, sourceInfo.Length, sourceInfo.Length, "Verifying encrypted data", stopwatch);
                 await VerifyEncryptedFileAsync(tempPath, password, cancellationToken);
             }
 
+            await _pauseGate.WaitIfPausedAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (File.Exists(destinationPath))
                 throw new IOException("The destination file already exists. Rice2k will not overwrite it automatically.");
@@ -179,6 +193,7 @@ public sealed class FileEncryptionService
         }
         finally
         {
+            _pauseGate.Resume();
             CryptographicOperations.ZeroMemory(passwordBytes);
             if (key is not null)
                 CryptographicOperations.ZeroMemory(key);
@@ -193,6 +208,7 @@ public sealed class FileEncryptionService
         CancellationToken cancellationToken = default)
     {
         ValidateSourceAndDestination(sourcePath, destinationPath, password, requireStrongPassword: false);
+        _pauseGate.Resume();
 
         var tempPath = CreateUniqueTempPath(destinationPath);
 
@@ -207,10 +223,12 @@ public sealed class FileEncryptionService
                 FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
                 await DecryptCoreAsync(sourcePath, password, output, progress, cancellationToken);
+                await _pauseGate.WaitIfPausedAsync(cancellationToken);
                 await output.FlushAsync(cancellationToken);
                 output.Flush(flushToDisk: true);
             }
 
+            await _pauseGate.WaitIfPausedAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (File.Exists(destinationPath))
                 throw new IOException("The destination file already exists. Rice2k will not overwrite it automatically.");
@@ -222,6 +240,10 @@ public sealed class FileEncryptionService
             TryDelete(tempPath);
             throw;
         }
+        finally
+        {
+            _pauseGate.Resume();
+        }
     }
 
     public async Task VerifyEncryptedFileAsync(
@@ -232,7 +254,7 @@ public sealed class FileEncryptionService
         await DecryptCoreAsync(sourcePath, password, Stream.Null, null, cancellationToken);
     }
 
-    private static async Task DecryptCoreAsync(
+    private async Task DecryptCoreAsync(
         string sourcePath,
         string password,
         Stream destination,
@@ -268,7 +290,9 @@ public sealed class FileEncryptionService
                 throw new InvalidDataException("The encrypted file header is truncated.", ex);
             }
 
+            await _pauseGate.WaitIfPausedAsync(cancellationToken);
             key = DeriveKey(passwordBytes, header.Salt, header.OpsLimit, header.MemLimit);
+            await _pauseGate.WaitIfPausedAsync(cancellationToken);
 
             FileMetadata metadata;
             try
@@ -306,6 +330,7 @@ public sealed class FileEncryptionService
 
             while (input.Position < input.Length)
             {
+                await _pauseGate.WaitIfPausedAsync(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 
                 long index;
@@ -362,6 +387,7 @@ public sealed class FileEncryptionService
                 }
             }
 
+            await _pauseGate.WaitIfPausedAsync(cancellationToken);
             if (expectedIndex != metadata.ChunkCount || written != metadata.OriginalLength)
                 throw new InvalidDataException("The encrypted file is incomplete or contains unexpected data.");
 
