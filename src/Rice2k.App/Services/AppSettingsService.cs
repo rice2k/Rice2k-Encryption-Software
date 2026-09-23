@@ -21,7 +21,8 @@ public sealed record Rice2kAppSettings(
     bool RememberRecentFiles = false,
     bool PersistentActivityLogEnabled = false,
     bool ClearDiskHistoryWhenPrivacyModeStarts = true,
-    bool ReduceMotion = false);
+    bool ReduceMotion = false,
+    bool DesktopNotificationsEnabled = true);
 
 public sealed class AppSettingsService
 {
