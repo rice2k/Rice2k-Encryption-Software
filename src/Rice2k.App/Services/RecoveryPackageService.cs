@@ -18,6 +18,7 @@ public sealed class RecoveryPackageService
     private const int SecretKeySize = 32;
     private const int AuthenticationTagSize = 16;
     private const int MinimumPasswordLength = 12;
+    private const int MaximumKeyNameCharacters = 200;
     private const int MaximumCipherLength = 64 * 1024;
     private const int MaximumPayloadLength = MaximumCipherLength - AuthenticationTagSize;
     private const long MaximumSupportedOpsLimit = 10;
@@ -33,6 +34,7 @@ public sealed class RecoveryPackageService
     public async Task CreateAsync(ManagedKey managedKey, string destinationPath, string recoveryPassword, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(managedKey);
+        ValidateRecoveryMetadata(managedKey.Id, managedKey.Name);
         ValidatePassword(recoveryPassword, creatingPackage: true);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
 
@@ -195,6 +197,7 @@ public sealed class RecoveryPackageService
 
             var payload = JsonSerializer.Deserialize<RecoveryPayload>(plain)
                 ?? throw new InvalidDataException("The decrypted recovery package is missing its key data.");
+            ValidateRecoveryMetadata(payload.Id, payload.Name);
 
             try
             {
@@ -208,7 +211,7 @@ public sealed class RecoveryPackageService
             if (secret.Length != SecretKeySize)
                 throw new InvalidDataException("The recovery package does not contain a valid 256-bit key.");
 
-            return new ManagedKey(payload.Id, payload.Name, payload.OriginalCreatedUtc, "Recovered .r2krecovery", secret);
+            return new ManagedKey(payload.Id, payload.Name.Trim(), payload.OriginalCreatedUtc, "Recovered .r2krecovery", secret);
         }
         catch (EndOfStreamException ex)
         {
@@ -240,6 +243,14 @@ public sealed class RecoveryPackageService
         writer.Write(salt);
         writer.Flush();
         return stream.ToArray();
+    }
+
+    private static void ValidateRecoveryMetadata(Guid id, string name)
+    {
+        if (id == Guid.Empty)
+            throw new InvalidDataException("The recovery package contains an invalid key identifier.");
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaximumKeyNameCharacters)
+            throw new InvalidDataException($"Recovery key names must contain 1 to {MaximumKeyNameCharacters} characters.");
     }
 
     private static void ValidatePassword(string password, bool creatingPackage)
