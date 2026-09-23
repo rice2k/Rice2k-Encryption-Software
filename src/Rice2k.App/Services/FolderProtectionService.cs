@@ -30,18 +30,39 @@ public sealed class FolderProtectionService
         if (plan.Files.Count == 0)
             throw new InvalidOperationException("The selected folder does not contain any regular files that Rice2k can protect.");
 
-        using var session = await _vaultService.CreateAsync(plan.DestinationPath, password, cancellationToken);
-        var files = plan.Files
-            .Select(file => (
-                SourcePath: file.SourcePath,
-                VaultPath: $"{plan.VaultRootName}/{file.RelativePath}"))
-            .ToArray();
+        SecureVaultSession? session = null;
+        try
+        {
+            session = await _vaultService.CreateAsync(plan.DestinationPath, password, cancellationToken);
+            var files = plan.Files
+                .Select(file => (
+                    SourcePath: file.SourcePath,
+                    VaultPath: $"{plan.VaultRootName}/{file.RelativePath}"))
+                .ToArray();
 
-        await _vaultService.AddFilesWithProgressAsync(
-            session,
-            files,
-            progress,
-            cancellationToken);
+            await _vaultService.AddFilesWithProgressAsync(
+                session,
+                files,
+                progress,
+                cancellationToken);
+        }
+        catch
+        {
+            var canRemoveEmptyOutput = session is not null &&
+                                       session.Sequence == 0 &&
+                                       session.Entries.Count == 0 &&
+                                       !SecureVaultService.HasRecoveryBackup(plan.DestinationPath);
+            session?.Dispose();
+            session = null;
+
+            if (canRemoveEmptyOutput)
+                TryDeleteEmptyOutput(plan.DestinationPath);
+            throw;
+        }
+        finally
+        {
+            session?.Dispose();
+        }
     }
 
     private static FolderProtectionPlan Scan(
@@ -205,6 +226,19 @@ public sealed class FolderProtectionService
         catch (OverflowException)
         {
             throw new IOException("The selected folder is too large for this development build to estimate safely.");
+        }
+    }
+
+    private static void TryDeleteEmptyOutput(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+            // Best effort only. Source files are never deleted by this cleanup.
         }
     }
 
