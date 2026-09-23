@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Rice2k.Encryption.Services;
 
@@ -6,6 +7,7 @@ namespace Rice2k.Tests;
 public sealed class KeyFileEncryptionServiceTests
 {
     private const string Password = "correct horse battery staple 2026";
+    private const int FingerprintLengthOffset = 8 + 1 + 1 + 1 + 1 + sizeof(long) + sizeof(int) + sizeof(int) + 16;
     private readonly KeyFileEncryptionService _service = new();
     private readonly KeyManagerService _keys = new();
 
@@ -84,6 +86,31 @@ public sealed class KeyFileEncryptionServiceTests
             _service.DecryptFileAsync(encrypted, restored, Password, key));
 
         Assert.False(File.Exists(restored));
+    }
+
+    [Fact]
+    public async Task Decrypt_ExcessiveMetadataLength_IsRejectedBeforeKeyDerivation()
+    {
+        using var temp = new TempDirectory();
+        using var key = _keys.Generate("Metadata Limit Key");
+        var source = temp.PathFor("metadata-limit.txt");
+        var encrypted = temp.PathFor("metadata-limit.txt.r2kenc");
+        var restored = temp.PathFor("metadata-limit.restored.txt");
+        await File.WriteAllTextAsync(source, "metadata limit test");
+        await _service.EncryptFileAsync(source, encrypted, Password, key, verifyAfterEncrypt: false);
+
+        var bytes = await File.ReadAllBytesAsync(encrypted);
+        var fingerprintLength = bytes[FingerprintLengthOffset];
+        var metadataCipherLengthOffset = checked(FingerprintLengthOffset + 1 + fingerprintLength + 24);
+        BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(metadataCipherLengthOffset, sizeof(int)), int.MaxValue);
+        await File.WriteAllBytesAsync(encrypted, bytes);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            _service.DecryptFileAsync(encrypted, restored, Password, key));
+
+        Assert.Contains("metadata length", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(restored));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
     }
 
     [Fact]
