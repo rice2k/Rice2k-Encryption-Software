@@ -20,6 +20,8 @@ public partial class MainWindow
     private bool _startupLockChecked;
     private bool _startupPresentationBlanked;
     private bool _systemEventsSubscribed;
+    private string? _pendingAppLockReason;
+    private bool _pendingAppLockWaitStarted;
 
     private sealed record WindowPresentationState(
         Window Window,
@@ -205,6 +207,16 @@ public partial class MainWindow
         if (_appLockActive)
             return;
 
+        // Never display a lock dialog against an App Lock credential that is being
+        // changed or removed. Preserve the request and retry after the Settings
+        // operation reaches its consistency boundary. The retry re-reads current
+        // settings/credential state, so a successful removal simply suppresses it.
+        if (IsSettingsSecurityOperationActive())
+        {
+            DeferAppLockUntilSettingsReady(reason);
+            return;
+        }
+
         var settings = _appSettingsService.Load();
         ApplyAppLockSettings(settings);
         if (!settings.AppLockEnabled || !_appLockCredentialService.IsConfigured())
@@ -250,6 +262,42 @@ public partial class MainWindow
         {
             // Restoration is best effort; an application shutdown may already be underway.
         }
+    }
+
+    private void DeferAppLockUntilSettingsReady(string reason)
+    {
+        _pendingAppLockReason = reason;
+        GlobalStatusText.Text = "● App Lock requested   |   waiting for security settings to finish safely";
+
+        if (_pendingAppLockWaitStarted)
+            return;
+
+        _pendingAppLockWaitStarted = true;
+        _ = CompleteDeferredAppLockAsync();
+    }
+
+    private async Task CompleteDeferredAppLockAsync()
+    {
+        try
+        {
+            while (IsSettingsSecurityOperationActive() && !Dispatcher.HasShutdownStarted)
+                await Task.Delay(100);
+        }
+        finally
+        {
+            _pendingAppLockWaitStarted = false;
+        }
+
+        if (Dispatcher.HasShutdownStarted || _safeExitRequested)
+        {
+            _pendingAppLockReason = null;
+            return;
+        }
+
+        var reason = _pendingAppLockReason;
+        _pendingAppLockReason = null;
+        if (!string.IsNullOrWhiteSpace(reason))
+            Dispatcher.BeginInvoke(new Action(() => RequestAppLock(reason)));
     }
 
     private void RestoreStartupPresentation()
@@ -313,6 +361,7 @@ public partial class MainWindow
     {
         _appLockTimer?.Stop();
         _appLockTimer = null;
+        _pendingAppLockReason = null;
         StateChanged -= MainWindow_AppLockStateChanged;
         InputManager.Current.PreProcessInput -= InputManager_PreProcessInput;
         if (_systemEventsSubscribed)
