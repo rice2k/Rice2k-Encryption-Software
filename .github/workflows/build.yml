@@ -2,13 +2,25 @@ name: Validate Rice2k Encryption Software
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
 
+concurrency:
+  group: rice2k-validation-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
+    name: Windows .NET 10 build and tests
     runs-on: windows-latest
+    timeout-minutes: 35
 
     steps:
       - name: Check out repository
@@ -19,15 +31,19 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore
+      - name: Record SDK environment
+        shell: pwsh
+        run: dotnet --info
+
+      - name: Restore complete solution
         shell: pwsh
         run: dotnet restore Rice2kEncryption.sln
 
-      - name: Build
+      - name: Build complete solution (Release)
         shell: pwsh
-        run: dotnet build Rice2kEncryption.sln --configuration Release --no-restore
+        run: dotnet build Rice2kEncryption.sln --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
 
-      - name: Run security tests
+      - name: Run security/regression tests
         shell: pwsh
         run: dotnet test tests/Rice2k.Tests/Rice2k.Tests.csproj --configuration Release --no-build --logger "trx;LogFileName=rice2k-tests.trx"
 
@@ -35,7 +51,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rice2k-test-results
+          name: rice2k-test-results-${{ github.run_number }}
           path: tests/Rice2k.Tests/TestResults/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 30
