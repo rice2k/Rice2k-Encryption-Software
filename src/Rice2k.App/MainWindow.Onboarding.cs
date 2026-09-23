@@ -15,6 +15,7 @@ public partial class MainWindow
         InitializeExperienceUi();
         InitializePrivacyUi();
         InitializePrivacyHistoryUi();
+        InitializeDesktopNotificationsUi();
         InitializeAppLockUi();
         InitializeSecurityCenterUi();
         InitializeCollisionGuards();
