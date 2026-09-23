@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using Rice2k.Encryption.Services;
 
 namespace Rice2k.Encryption;
@@ -6,6 +7,7 @@ namespace Rice2k.Encryption;
 public partial class SettingsSearchPanel
 {
     private bool _privacyExtrasHooked;
+    private CheckBox? _desktopNotificationsCheck;
 
     protected override void OnInitialized(EventArgs e)
     {
@@ -21,6 +23,7 @@ public partial class SettingsSearchPanel
     private void SettingsSearchPanel_PrivacyExtrasLoaded(object sender, RoutedEventArgs e)
     {
         Loaded -= SettingsSearchPanel_PrivacyExtrasLoaded;
+        EnsureDesktopNotificationControl();
 
         _loading = true;
         try
@@ -30,6 +33,8 @@ public partial class SettingsSearchPanel
             PersistentActivityCheck.IsChecked = settings.PersistentActivityLogEnabled;
             ClearDiskHistoryCheck.IsChecked = settings.ClearDiskHistoryWhenPrivacyModeStarts;
             ReduceMotionCheck.IsChecked = settings.ReduceMotion;
+            if (_desktopNotificationsCheck is not null)
+                _desktopNotificationsCheck.IsChecked = settings.DesktopNotificationsEnabled;
         }
         finally
         {
@@ -42,6 +47,56 @@ public partial class SettingsSearchPanel
         PersistentActivityCheck.Unchecked += OptionalHistoryPreference_Changed;
         ClearDiskHistoryCheck.Checked += OptionalHistoryPreference_Changed;
         ClearDiskHistoryCheck.Unchecked += OptionalHistoryPreference_Changed;
+    }
+
+    private void EnsureDesktopNotificationControl()
+    {
+        if (_desktopNotificationsCheck is not null || PrivacyCard.Child is not StackPanel panel)
+            return;
+
+        panel.Children.Add(new Separator { Margin = new Thickness(0, 18, 0, 12) });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Desktop completion notifications",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 5)
+        });
+
+        _desktopNotificationsCheck = new CheckBox
+        {
+            Content = "Show generic Windows notifications when encryption/decryption finishes",
+            Foreground = TryFindResource("TextBrush") as System.Windows.Media.Brush,
+            ToolTip = "Notifications never include filenames, paths, passwords, keys, or plaintext. Privacy Mode suppresses them.",
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+        _desktopNotificationsCheck.Checked += DesktopNotifications_Changed;
+        _desktopNotificationsCheck.Unchecked += DesktopNotifications_Changed;
+        panel.Children.Add(_desktopNotificationsCheck);
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Completion notifications are intentionally generic and are automatically suppressed while Privacy Mode is on.",
+            Foreground = TryFindResource("MutedTextBrush") as System.Windows.Media.Brush,
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(20, 2, 0, 0)
+        });
+    }
+
+    private void DesktopNotifications_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading || _desktopNotificationsCheck is null)
+            return;
+
+        var enabled = _desktopNotificationsCheck.IsChecked == true;
+        var current = _settingsService.Load();
+        var updated = current with { DesktopNotificationsEnabled = enabled };
+        var saved = _settingsService.TrySave(updated);
+        _privacyChanged?.Invoke(updated);
+        PrivacyStatusText.Text = saved
+            ? enabled
+                ? "Generic completion notifications enabled. Privacy Mode will suppress them."
+                : "Desktop completion notifications disabled."
+            : "Desktop-notification preference could not be saved; Rice2k will continue using the last saved setting.";
     }
 
     private void OptionalHistoryPreference_Changed(object sender, RoutedEventArgs e)
