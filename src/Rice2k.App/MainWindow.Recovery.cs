@@ -6,6 +6,7 @@ namespace Rice2k.Encryption;
 public partial class MainWindow
 {
     private bool _recoveryUiInitialized;
+    private TextBlock? _recoveryHealthText;
 
     private void InitializeRecoveryUi()
     {
@@ -13,6 +14,13 @@ public partial class MainWindow
             return;
 
         _recoveryUiInitialized = true;
+        InitializeRecoveryPage();
+        InitializeRecoveryHealthCard();
+        RefreshRecoveryHealth();
+    }
+
+    private void InitializeRecoveryPage()
+    {
         if (RecoveryPage.Content is not StackPanel root)
             return;
 
@@ -24,19 +32,7 @@ public partial class MainWindow
         foreach (var border in root.Children.OfType<Border>().ToArray())
             border.Visibility = Visibility.Collapsed;
 
-        var card = new Border
-        {
-            Margin = new Thickness(0, 0, 0, 10),
-            Padding = new Thickness(18),
-            CornerRadius = new CornerRadius(10),
-            BorderThickness = new Thickness(1)
-        };
-
-        if (TryFindResource("SurfaceBrush") is System.Windows.Media.Brush surface)
-            card.Background = surface;
-        if (TryFindResource("BorderBrush") is System.Windows.Media.Brush borderBrush)
-            card.BorderBrush = borderBrush;
-
+        var card = CreateRecoveryCard();
         var panel = new StackPanel();
         panel.Children.Add(new TextBlock
         {
@@ -70,12 +66,86 @@ public partial class MainWindow
         root.Children.Add(card);
     }
 
+    private void InitializeRecoveryHealthCard()
+    {
+        if (HomePage.Content is not StackPanel homeRoot)
+            return;
+
+        var card = CreateRecoveryCard();
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Recovery health",
+            FontSize = 17,
+            FontWeight = FontWeights.SemiBold
+        });
+
+        _recoveryHealthText = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 7, 0, 10)
+        };
+        panel.Children.Add(_recoveryHealthText);
+
+        var openButton = new Button
+        {
+            Content = "Open Recovery Center",
+            Width = 180,
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        openButton.Click += OpenRecoveryCenter_Click;
+        panel.Children.Add(openButton);
+        card.Child = panel;
+        homeRoot.Children.Add(card);
+    }
+
+    private Border CreateRecoveryCard()
+    {
+        var card = new Border
+        {
+            Margin = new Thickness(0, 0, 0, 10),
+            Padding = new Thickness(18),
+            CornerRadius = new CornerRadius(10),
+            BorderThickness = new Thickness(1)
+        };
+
+        if (TryFindResource("SurfaceBrush") is System.Windows.Media.Brush surface)
+            card.Background = surface;
+        if (TryFindResource("BorderBrush") is System.Windows.Media.Brush borderBrush)
+            card.BorderBrush = borderBrush;
+        return card;
+    }
+
+    private void RefreshRecoveryHealth()
+    {
+        if (_recoveryHealthText is null)
+            return;
+
+        var settings = _appSettingsService.Load();
+        if (settings.LastRecoveryTestUtc is not { } testedUtc)
+        {
+            _recoveryHealthText.Text = "⚠ No successful recovery test has been recorded on this PC yet. Creating a backup is not enough—test it before relying on it.";
+            return;
+        }
+
+        var local = testedUtc.ToLocalTime();
+        var keyName = string.IsNullOrWhiteSpace(settings.LastRecoveryKeyName)
+            ? "recovery key"
+            : settings.LastRecoveryKeyName;
+        var fingerprint = string.IsNullOrWhiteSpace(settings.LastRecoveryFingerprint)
+            ? string.Empty
+            : $" • {settings.LastRecoveryFingerprint}";
+
+        _recoveryHealthText.Text = $"✓ Last successful recovery test: {local:g} • {keyName}{fingerprint}";
+    }
+
     private void OpenRecoveryCenter_Click(object sender, RoutedEventArgs e)
     {
-        var recovery = new RecoveryCenterWindow
+        var recovery = new RecoveryCenterWindow(_appSettingsService)
         {
             Owner = this
         };
         recovery.ShowDialog();
+        RefreshRecoveryHealth();
     }
 }
