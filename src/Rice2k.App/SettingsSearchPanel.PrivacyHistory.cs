@@ -87,8 +87,6 @@ public partial class SettingsSearchPanel
         window.ShowDialog();
     }
 
-    public bool FocusSearchBox() => SettingsSearchBox.Focus();
-
     private static string BuildHistoryPreferenceSummary(Rice2kAppSettings settings)
     {
         var recent = settings.RememberRecentFiles ? "recent-file paths ON" : "recent-file paths OFF";
