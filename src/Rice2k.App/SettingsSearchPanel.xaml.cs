@@ -30,6 +30,8 @@ public partial class SettingsSearchPanel : UserControl
         ApplySearch();
     }
 
+    public bool HasActiveAppLockOperation { get; private set; }
+
     public void RefreshPrivacySettings(Rice2kAppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -149,6 +151,10 @@ public partial class SettingsSearchPanel : UserControl
 
     private async void ConfigureAppLock_Click(object sender, RoutedEventArgs e)
     {
+        if (HasActiveAppLockOperation)
+            return;
+
+        BeginAppLockOperation();
         var wasConfigured = _appLockService.IsConfigured();
         string? newPassword = null;
 
@@ -227,26 +233,32 @@ public partial class SettingsSearchPanel : UserControl
         finally
         {
             newPassword = string.Empty;
+            EndAppLockOperation();
         }
     }
 
     private async void RemoveAppLock_Click(object sender, RoutedEventArgs e)
     {
+        if (HasActiveAppLockOperation)
+            return;
+
         if (!_appLockService.IsConfigured())
         {
             RefreshAppLockControls(_settingsService.Load());
             return;
         }
 
-        var password = PromptForPassword(
-            "Remove Rice2k App Lock",
-            "Enter the current app-lock password. Removing App Lock does not change any encrypted file, vault, key, or identity password.");
-        if (password is null)
-            return;
-
-        var previous = _settingsService.Load();
+        BeginAppLockOperation();
+        string? password = null;
         try
         {
+            password = PromptForPassword(
+                "Remove Rice2k App Lock",
+                "Enter the current app-lock password. Removing App Lock does not change any encrypted file, vault, key, or identity password.");
+            if (password is null)
+                return;
+
+            var previous = _settingsService.Load();
             var valid = await Task.Run(() => _appLockService.Verify(password));
             if (!valid)
             {
@@ -299,12 +311,29 @@ public partial class SettingsSearchPanel : UserControl
         finally
         {
             password = string.Empty;
+            EndAppLockOperation();
         }
+    }
+
+    private void BeginAppLockOperation()
+    {
+        HasActiveAppLockOperation = true;
+        ConfigureAppLockButton.IsEnabled = false;
+        RemoveAppLockButton.IsEnabled = false;
+        LockOnMinimizeCheck.IsEnabled = false;
+        LockOnWindowsSessionCheck.IsEnabled = false;
+        AppLockInactivityCombo.IsEnabled = false;
+    }
+
+    private void EndAppLockOperation()
+    {
+        HasActiveAppLockOperation = false;
+        RefreshAppLockControls(_settingsService.Load());
     }
 
     private void AppLockPreference_Changed(object sender, RoutedEventArgs e)
     {
-        if (_loading)
+        if (_loading || HasActiveAppLockOperation)
             return;
 
         if (!_appLockService.IsConfigured())
@@ -339,7 +368,7 @@ public partial class SettingsSearchPanel : UserControl
 
     private void AppLockInactivity_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (_loading || AppLockInactivityCombo.SelectedItem is not ComboBoxItem item ||
+        if (_loading || HasActiveAppLockOperation || AppLockInactivityCombo.SelectedItem is not ComboBoxItem item ||
             !int.TryParse(item.Tag?.ToString(), out var minutes))
         {
             return;
@@ -379,10 +408,11 @@ public partial class SettingsSearchPanel : UserControl
         var enabled = credentialPresent && settings.AppLockEnabled;
 
         ConfigureAppLockButton.Content = credentialPresent ? "Change App Lock Password…" : "Set App Lock Password…";
-        RemoveAppLockButton.IsEnabled = credentialPresent;
-        LockOnMinimizeCheck.IsEnabled = enabled;
-        LockOnWindowsSessionCheck.IsEnabled = enabled;
-        AppLockInactivityCombo.IsEnabled = enabled;
+        ConfigureAppLockButton.IsEnabled = !HasActiveAppLockOperation;
+        RemoveAppLockButton.IsEnabled = credentialPresent && !HasActiveAppLockOperation;
+        LockOnMinimizeCheck.IsEnabled = enabled && !HasActiveAppLockOperation;
+        LockOnWindowsSessionCheck.IsEnabled = enabled && !HasActiveAppLockOperation;
+        AppLockInactivityCombo.IsEnabled = enabled && !HasActiveAppLockOperation;
 
         AppLockConfiguredText.Text = credentialPresent
             ? enabled
