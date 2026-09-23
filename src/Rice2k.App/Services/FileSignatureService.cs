@@ -11,6 +11,9 @@ public sealed class FileSignatureService
     private const string Format = "R2KSIG1";
     private const int Version = 1;
     private const int MaximumSignatureFileLength = 128 * 1024;
+    private const int MaximumSignerNameLength = 200;
+    private const int MaximumSignerFingerprintLength = 100;
+    private const int MaximumOriginalFileNameLength = 1024;
 
     private sealed record SignatureDocument(
         string Format,
@@ -45,11 +48,19 @@ public sealed class FileSignatureService
             throw new DirectoryNotFoundException("The selected signature folder does not exist.");
 
         var sourceInfo = new FileInfo(sourcePath);
+        if (string.IsNullOrWhiteSpace(identity.Name) || identity.Name.Length > MaximumSignerNameLength)
+            throw new InvalidDataException("The signing identity contains an invalid signer label.");
+        if (string.IsNullOrWhiteSpace(identity.Fingerprint) || identity.Fingerprint.Length > MaximumSignerFingerprintLength)
+            throw new InvalidDataException("The signing identity contains an invalid fingerprint.");
+        if (string.IsNullOrWhiteSpace(sourceInfo.Name) || sourceInfo.Name.Length > MaximumOriginalFileNameLength)
+            throw new InvalidDataException("The source filename is too long for the Rice2k signature format.");
+
         var signedUtc = DateTimeOffset.UtcNow;
         var signingPrivate = identity.CopySigningPrivateKey();
         byte[]? hash = null;
         byte[]? payload = null;
         byte[]? signature = null;
+        byte[]? documentBytes = null;
         var tempPath = destinationPath + $".{Guid.NewGuid():N}.partial";
 
         try
@@ -82,8 +93,25 @@ public sealed class FileSignatureService
                 Convert.ToBase64String(hash),
                 Convert.ToBase64String(signature));
 
-            var json = JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(tempPath, json, Encoding.UTF8, cancellationToken);
+            documentBytes = JsonSerializer.SerializeToUtf8Bytes(
+                document,
+                new JsonSerializerOptions { WriteIndented = true });
+            if (documentBytes.Length <= 0 || documentBytes.Length > MaximumSignatureFileLength)
+                throw new InvalidDataException("The generated Rice2k signature document exceeds the supported format size.");
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await using (var output = new FileStream(
+                tempPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                4096,
+                FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
+                await output.WriteAsync(documentBytes, cancellationToken);
+                await output.FlushAsync(cancellationToken);
+                output.Flush(flushToDisk: true);
+            }
 
             cancellationToken.ThrowIfCancellationRequested();
             if (File.Exists(destinationPath))
@@ -104,6 +132,8 @@ public sealed class FileSignatureService
                 CryptographicOperations.ZeroMemory(payload);
             if (signature is not null)
                 CryptographicOperations.ZeroMemory(signature);
+            if (documentBytes is not null)
+                CryptographicOperations.ZeroMemory(documentBytes);
         }
     }
 
@@ -213,11 +243,11 @@ public sealed class FileSignatureService
             throw new NotSupportedException("This Rice2k signature format is not supported by this build.");
         if (!string.Equals(document.HashAlgorithm, "SHA-512", StringComparison.Ordinal))
             throw new NotSupportedException("This Rice2k signature uses an unsupported file-hash algorithm.");
-        if (string.IsNullOrWhiteSpace(document.SignerName) || document.SignerName.Length > 200)
+        if (string.IsNullOrWhiteSpace(document.SignerName) || document.SignerName.Length > MaximumSignerNameLength)
             throw new InvalidDataException("The signature contains an invalid signer label.");
-        if (string.IsNullOrWhiteSpace(document.SignerFingerprint) || document.SignerFingerprint.Length > 100)
+        if (string.IsNullOrWhiteSpace(document.SignerFingerprint) || document.SignerFingerprint.Length > MaximumSignerFingerprintLength)
             throw new InvalidDataException("The signature contains an invalid signer fingerprint.");
-        if (string.IsNullOrWhiteSpace(document.OriginalFileName) || document.OriginalFileName.Length > 1024)
+        if (string.IsNullOrWhiteSpace(document.OriginalFileName) || document.OriginalFileName.Length > MaximumOriginalFileNameLength)
             throw new InvalidDataException("The signature contains an invalid original filename.");
         if (document.FileLength < 0)
             throw new InvalidDataException("The signature contains an invalid file length.");
