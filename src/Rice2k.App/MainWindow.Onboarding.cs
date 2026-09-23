@@ -13,6 +13,7 @@ public partial class MainWindow
         InitializeVersionStatus();
         InitializePauseButtons();
         InitializeExperienceUi();
+        InitializePrivacyUi();
         InitializeCollisionGuards();
         InitializeAccessibilityUi();
         InitializeKeyManagerUi();
