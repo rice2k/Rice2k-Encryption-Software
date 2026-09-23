@@ -62,8 +62,11 @@ $eventNames = @(
     'Click', 'Checked', 'Unchecked', 'SelectionChanged', 'TextChanged',
     'PasswordChanged', 'Loaded', 'Unloaded', 'Closing', 'Closed',
     'KeyDown', 'KeyUp', 'PreviewKeyDown', 'PreviewKeyUp',
-    'MouseDown', 'MouseUp', 'PreviewMouseDown', 'PreviewMouseUp',
-    'MouseMove', 'StateChanged', 'Drop', 'DragOver', 'DragEnter', 'DragLeave'
+    'MouseDown', 'MouseUp', 'MouseMove',
+    'PreviewMouseDown', 'PreviewMouseUp', 'PreviewMouseMove',
+    'PreviewMouseLeftButtonDown', 'PreviewMouseLeftButtonUp',
+    'PreviewMouseRightButtonDown', 'PreviewMouseRightButtonUp',
+    'StateChanged', 'Drop', 'DragOver', 'DragEnter', 'DragLeave'
 )
 
 $xamlFiles = Get-ChildItem -Path $SourceRoot -Filter '*.xaml' -File -Recurse
