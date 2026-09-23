@@ -19,7 +19,7 @@
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock Text="Batch Encryption Queue" FontSize="28" FontWeight="SemiBold" />
             <TextBlock Text="Protect multiple files one at a time. A failure on one file does not remove successful encrypted outputs." Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,0" />
-            <TextBlock Text="Output files are saved beside each source file using safe Keep Both naming." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,0" />
+            <TextBlock Text="Add individual files or add the files inside a folder. Output files are saved beside each source file using safe Keep Both naming." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,0" />
         </StackPanel>
 
         <Border Grid.Row="1" Style="{StaticResource CardStyle}">
@@ -33,6 +33,7 @@
                     <TextBlock x:Name="QueueCountText" Text="0 files in queue" FontWeight="SemiBold" FontSize="17" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                         <Button x:Name="AddFilesButton" Content="Add files…" Click="AddFiles_Click" />
+                        <Button x:Name="AddFolderButton" Content="Add folder…" Click="AddFolder_Click" Style="{StaticResource SecondaryButtonStyle}" />
                         <Button x:Name="RemoveSelectedButton" Content="Remove selected" Click="RemoveSelected_Click" Style="{StaticResource SecondaryButtonStyle}" />
                         <Button x:Name="ClearQueueButton" Content="Clear queue" Click="ClearQueue_Click" Style="{StaticResource SecondaryButtonStyle}" />
                     </StackPanel>
@@ -94,7 +95,7 @@
 
         <Grid Grid.Row="3" Margin="0,16,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock Text="Tip: drag more files onto this window to add them to the queue." Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" FontSize="12" />
+            <TextBlock Text="Tip: drag files or folders onto this window. Folder intake skips junction/reparse directories to avoid recursive loops." Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" FontSize="12" />
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button x:Name="CancelBatchButton" Content="Cancel safely" Click="CancelBatch_Click" IsEnabled="False" Style="{StaticResource SecondaryButtonStyle}" />
                 <Button x:Name="StartBatchButton" Content="🔒 Start batch" Click="StartBatch_Click" MinWidth="145" />
