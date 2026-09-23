@@ -1,11 +1,14 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using Rice2k.Encryption.Models;
+using Rice2k.Encryption.Services;
 
 namespace Rice2k.Encryption;
 
 public partial class RecipientEncryptionWindow
 {
+    private readonly ProtectedClipboardService _protectedClipboard = new();
     private bool _contactsUiInitialized;
 
     protected override void OnContentRendered(EventArgs e)
@@ -19,6 +22,8 @@ public partial class RecipientEncryptionWindow
         if (_contactsUiInitialized)
             return;
         _contactsUiInitialized = true;
+
+        AddHandler(Button.ClickEvent, new RoutedEventHandler(RecipientWindow_PrivacyAwareButtonClick), handledEventsToo: true);
 
         if (RecipientsList.Parent is not StackPanel parent)
             return;
@@ -39,6 +44,27 @@ public partial class RecipientEncryptionWindow
         AutomationProperties.SetHelpText(button, "Opens the local public identity contact book and adds selected contacts as encryption recipients.");
         button.Click += OpenSavedContacts_Click;
         actions.Children.Insert(1, button);
+    }
+
+    private void RecipientWindow_PrivacyAwareButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (e.Source is not Button { Content: string label } ||
+            !string.Equals(label, "Copy Fingerprint", StringComparison.Ordinal) ||
+            RecipientsList.SelectedItem is not Rice2kPublicIdentity identity)
+        {
+            return;
+        }
+
+        try
+        {
+            _protectedClipboard.CopyText(
+                identity.Fingerprint,
+                message => EncryptProgressDetailText.Text = message + " Compare the fingerprint through a trusted independent channel.");
+        }
+        catch
+        {
+            // The original command already reports normal clipboard failures; this privacy layer is best effort.
+        }
     }
 
     private void OpenSavedContacts_Click(object sender, RoutedEventArgs e)
