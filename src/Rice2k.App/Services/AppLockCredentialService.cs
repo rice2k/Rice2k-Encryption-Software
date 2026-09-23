@@ -175,9 +175,17 @@ public sealed class AppLockCredentialService
         if (stored.MemLimit < 8 * 1024 * 1024 || stored.MemLimit > MaximumSupportedMemLimit)
             throw new InvalidDataException("The app-lock credential contains an unsupported Argon2 memory limit.");
 
-        _ = DecodeExact(stored.SaltBase64, 16, "salt");
-        _ = DecodeExact(stored.VerifierBase64, VerifierLength, "verifier");
-        return stored;
+        var salt = DecodeExact(stored.SaltBase64, 16, "salt");
+        var verifier = DecodeExact(stored.VerifierBase64, VerifierLength, "verifier");
+        try
+        {
+            return stored;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(salt);
+            CryptographicOperations.ZeroMemory(verifier);
+        }
     }
 
     private static byte[] DecodeExact(string encoded, int expectedLength, string label)
