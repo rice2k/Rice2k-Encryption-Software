@@ -29,9 +29,9 @@ public sealed class AppSettingsService
     private readonly string _settingsDirectory;
     private readonly string _settingsPath;
 
-    public AppSettingsService()
+    public AppSettingsService(string? settingsDirectory = null)
     {
-        _settingsDirectory = Path.Combine(
+        _settingsDirectory = settingsDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Rice2k Encryption Software");
         _settingsPath = Path.Combine(_settingsDirectory, "settings.json");
