@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace Rice2k.Encryption;
 
@@ -41,24 +43,45 @@ public partial class MainWindow
 
     private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if ((Keyboard.Modifiers & ModifierKeys.Control) == 0)
+        var modifiers = Keyboard.Modifiers;
+        if ((modifiers & ModifierKeys.Control) == 0)
         {
             if (e.Key == Key.F1)
             {
                 ShowKeyboardHelp();
                 e.Handled = true;
             }
+            else if (e.Key == Key.F6)
+            {
+                if ((modifiers & ModifierKeys.Shift) != 0)
+                    FocusNavigation();
+                else
+                    FocusActivePage();
+                e.Handled = true;
+            }
+            return;
+        }
+
+        if ((modifiers & ModifierKeys.Shift) != 0 && e.Key == Key.P)
+        {
+            PrivacyQuickToggle_Click(this, new RoutedEventArgs());
+            SyncPrivacySettingsPanel(_appSettingsService.Load());
+            e.Handled = true;
             return;
         }
 
         switch (e.Key)
         {
+            case Key.H:
+                NavigateToAndFocus("Home");
+                e.Handled = true;
+                break;
             case Key.E:
-                NavigateTo("Encrypt");
+                NavigateToAndFocus("Encrypt");
                 e.Handled = true;
                 break;
             case Key.D:
-                NavigateTo("Decrypt");
+                NavigateToAndFocus("Decrypt");
                 e.Handled = true;
                 break;
             case Key.B:
@@ -66,25 +89,82 @@ public partial class MainWindow
                 e.Handled = true;
                 break;
             case Key.T:
-                NavigateTo("Text");
+                NavigateToAndFocus("Text");
+                e.Handled = true;
+                break;
+            case Key.V:
+                NavigateToAndFocus("Vault");
+                e.Handled = true;
+                break;
+            case Key.K:
+                NavigateToAndFocus("Passwords");
                 e.Handled = true;
                 break;
             case Key.I:
-                NavigateTo("Integrity");
+                NavigateToAndFocus("Integrity");
+                e.Handled = true;
+                break;
+            case Key.L:
+                if (_appLockSettings.AppLockEnabled && _appLockCredentialService.IsConfigured())
+                    RequestAppLock("Rice2k was locked with Ctrl+L.");
+                else
+                {
+                    NavigateToAndFocus("Settings");
+                    GlobalStatusText.Text = "● Configure App Lock in Settings before using Ctrl+L.";
+                }
                 e.Handled = true;
                 break;
             case Key.OemComma:
-                NavigateTo("Settings");
+                NavigateToAndFocus("Settings", focusSettingsSearch: true);
                 e.Handled = true;
                 break;
         }
+    }
+
+    private void NavigateToAndFocus(string tag, bool focusSettingsSearch = false)
+    {
+        NavigateTo(tag);
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new Action(() =>
+            {
+                if (focusSettingsSearch && SettingsPage.Content is StackPanel root)
+                {
+                    var settingsPanel = root.Children.OfType<SettingsSearchPanel>().FirstOrDefault();
+                    if (settingsPanel?.FocusSearchBox() == true)
+                        return;
+                }
+                FocusActivePage();
+            }));
+    }
+
+    private void FocusActivePage()
+    {
+        var page = AllPages().FirstOrDefault(candidate => candidate.Visibility == Visibility.Visible);
+        if (page is null)
+            return;
+
+        var target = FindVisualChildren<Control>(page)
+            .FirstOrDefault(control => control.Focusable && control.IsEnabled && control.IsVisible && control.IsTabStop);
+        target?.Focus();
+    }
+
+    private void FocusNavigation()
+    {
+        var target = FindVisualChildren<Button>(this)
+            .FirstOrDefault(button =>
+                button.IsVisible &&
+                button.IsEnabled &&
+                button.Tag is string tag &&
+                tag is "Home" or "Encrypt" or "Decrypt" or "Text" or "Vault" or "Passwords" or "Integrity" or "Recovery" or "Activity" or "Settings");
+        target?.Focus();
     }
 
     private void ShowKeyboardHelp()
     {
         MessageBox.Show(
             this,
-            "Keyboard shortcuts\n\nCtrl+E   Encrypt file\nCtrl+D   Decrypt file\nCtrl+B   Batch Queue\nCtrl+T   Text Encryption\nCtrl+I   File Integrity\nCtrl+,   Settings\nF1       Show this help\n\nUse Tab and Shift+Tab to move through controls. Enter activates the focused button, and Space toggles check boxes.",
+            "Keyboard shortcuts\n\nCtrl+H   Command Center\nCtrl+E   Encrypt file\nCtrl+D   Decrypt file\nCtrl+B   Batch Queue\nCtrl+T   Text Encryption\nCtrl+V   Secure Vault\nCtrl+K   Passwords & Keys\nCtrl+I   File Integrity\nCtrl+L   Lock Rice2k\nCtrl+Shift+P   Toggle Privacy Mode\nCtrl+,   Settings / settings search\nF6       Move focus into active page\nShift+F6 Move focus to navigation\nF1       Show this help\n\nUse Tab and Shift+Tab to move through controls. Enter activates the focused button, and Space toggles check boxes.",
             "Rice2k keyboard shortcuts",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
