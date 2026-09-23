@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using Microsoft.Win32;
 using Rice2k.Encryption.Models;
@@ -9,6 +10,9 @@ public partial class VaultRecoveryArtifactsWindow : Window
 {
     private readonly SecureVaultService _service;
     private readonly SecureVaultSession _session;
+    private CancellationTokenSource? _operationCts;
+    private bool _busy;
+    private bool _closeWhenFinished;
 
     private sealed record ArtifactRow(
         string Path,
@@ -22,13 +26,21 @@ public partial class VaultRecoveryArtifactsWindow : Window
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         InitializeComponent();
+        Closing += VaultRecoveryArtifactsWindow_Closing;
         RefreshRows();
     }
 
-    private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshRows();
+    private void Refresh_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_busy)
+            RefreshRows();
+    }
 
     private async void VerifySelected_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         if (ArtifactsGrid.SelectedItem is not ArtifactRow row)
         {
             ShowWarning("Select a recovery file first.");
@@ -42,13 +54,18 @@ public partial class VaultRecoveryArtifactsWindow : Window
             return;
         }
 
+        BeginOperation("Verifying interrupted save…", row.FileName);
         try
         {
-            StatusText.Text = "Verifying interrupted save…";
-            DetailText.Text = row.FileName;
-            var result = await _service.VerifyInterruptedPendingAsync(_session, row.Path);
+            var result = await _service.VerifyInterruptedPendingAsync(_session, row.Path, _operationCts!.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
             StatusText.Text = "✓ Interrupted pending save verified";
             DetailText.Text = $"Sequence {result.Sequence:N0} • {result.EntryCount:N0} protected file(s) • updated {result.UpdatedUtc.ToLocalTime():g} • {FormatBytes(result.FileSize)}. Rice2k will not promote this copy automatically.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Pending-save verification cancelled";
+            DetailText.Text = "The recovery artifact was left unchanged.";
         }
         catch (Exception ex)
         {
@@ -56,10 +73,17 @@ public partial class VaultRecoveryArtifactsWindow : Window
             DetailText.Text = "Keep the active vault unchanged. Preserve the artifact until the failure is understood.";
             ShowWarning(ex.Message);
         }
+        finally
+        {
+            EndOperation();
+        }
     }
 
     private async void MovePendingAside_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         if (ArtifactsGrid.SelectedItem is not ArtifactRow row || !row.Kind.Contains("pending", StringComparison.OrdinalIgnoreCase))
         {
             ShowWarning("Select an interrupted pending-save file first.");
@@ -78,14 +102,25 @@ public partial class VaultRecoveryArtifactsWindow : Window
         if (dialog.ShowDialog(this) != true)
             return;
 
+        BeginOperation(
+            "Verifying before moving…",
+            "The pending copy must fully authenticate before Rice2k moves it aside.");
         try
         {
-            StatusText.Text = "Verifying before moving…";
-            DetailText.Text = "The pending copy must fully authenticate before Rice2k moves it aside.";
-            await _service.PreserveInterruptedPendingAsync(_session, row.Path, dialog.FileName);
+            await _service.PreserveInterruptedPendingAsync(
+                _session,
+                row.Path,
+                dialog.FileName,
+                _operationCts!.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
             StatusText.Text = "✓ Interrupted save preserved separately";
             DetailText.Text = dialog.FileName;
             RefreshRows();
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Pending-save preservation cancelled";
+            DetailText.Text = "The original artifact was left in place unless its verified atomic move had already completed.";
         }
         catch (Exception ex)
         {
@@ -93,6 +128,46 @@ public partial class VaultRecoveryArtifactsWindow : Window
             DetailText.Text = "The original artifact was left in place where possible.";
             ShowWarning(ex.Message);
         }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
+    private void BeginOperation(string status, string detail)
+    {
+        _operationCts?.Dispose();
+        _operationCts = new CancellationTokenSource();
+        _busy = true;
+        ArtifactsGrid.IsEnabled = false;
+        StatusText.Text = status;
+        DetailText.Text = detail;
+    }
+
+    private void EndOperation()
+    {
+        _busy = false;
+        ArtifactsGrid.IsEnabled = true;
+        _operationCts?.Dispose();
+        _operationCts = null;
+
+        if (_closeWhenFinished)
+        {
+            _closeWhenFinished = false;
+            Dispatcher.InvokeAsync(Close);
+        }
+    }
+
+    private void VaultRecoveryArtifactsWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        if (!_busy)
+            return;
+
+        e.Cancel = true;
+        _closeWhenFinished = true;
+        StatusText.Text = "Cancelling recovery-file operation before closing…";
+        DetailText.Text = "The window will close after Rice2k reaches a safe verification/file-operation boundary.";
+        _operationCts?.Cancel();
     }
 
     private void RefreshRows()
