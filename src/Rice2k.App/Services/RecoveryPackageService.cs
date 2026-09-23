@@ -16,8 +16,10 @@ public sealed class RecoveryPackageService
     private const int SaltSize = 16;
     private const int NonceSize = 24;
     private const int SecretKeySize = 32;
+    private const int AuthenticationTagSize = 16;
     private const int MinimumPasswordLength = 12;
     private const int MaximumCipherLength = 64 * 1024;
+    private const int MaximumPayloadLength = MaximumCipherLength - AuthenticationTagSize;
     private const long MaximumSupportedOpsLimit = 10;
     private const int MaximumSupportedMemLimit = 256 * 1024 * 1024;
 
@@ -57,7 +59,13 @@ public sealed class RecoveryPackageService
                 DateTimeOffset.UtcNow,
                 Convert.ToBase64String(secret));
             payloadBytes = JsonSerializer.SerializeToUtf8Bytes(payload);
+            if (payloadBytes.Length > MaximumPayloadLength)
+            {
+                throw new InvalidDataException(
+                    "The key name/metadata is too large for the Rice2k recovery-package format. Use a shorter key name before creating recovery material.");
+            }
 
+            cancellationToken.ThrowIfCancellationRequested();
             var salt = PasswordHash.ArgonGenerateSalt();
             var nonce = SecretAeadXChaCha20Poly1305.GenerateNonce();
             derivedKey = PasswordHash.ArgonHashBinary(
@@ -73,6 +81,8 @@ public sealed class RecoveryPackageService
                 nonce,
                 derivedKey,
                 BuildAad(OpsLimit, MemLimit, salt));
+            if (cipher.Length > MaximumCipherLength)
+                throw new InvalidOperationException("Rice2k generated a recovery package outside its supported format limit.");
 
             await using (var output = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
             using (var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true))
@@ -158,7 +168,7 @@ public sealed class RecoveryPackageService
                 throw new InvalidDataException("The recovery package header is truncated.");
 
             var cipherLength = reader.ReadInt32();
-            if (cipherLength < 16 || cipherLength > MaximumCipherLength)
+            if (cipherLength < AuthenticationTagSize || cipherLength > MaximumCipherLength)
                 throw new InvalidDataException("The encrypted recovery payload length is invalid.");
 
             cipher = reader.ReadBytes(cipherLength);
