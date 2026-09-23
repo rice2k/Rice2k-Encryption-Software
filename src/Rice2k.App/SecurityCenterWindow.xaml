@@ -55,8 +55,10 @@
                             <TextBlock Text="Privacy Mode" FontSize="18" FontWeight="SemiBold" />
                             <TextBlock x:Name="PrivacyModeText" FontWeight="SemiBold" Margin="0,9,0,3" />
                             <TextBlock x:Name="ClipboardText" Margin="0,0,0,3" />
-                            <TextBlock x:Name="ActivityPrivacyText" />
-                            <TextBlock Text="Privacy Mode changes the running interface; it is not an encryption algorithm."
+                            <TextBlock x:Name="ActivityPrivacyText" Margin="0,0,0,3" />
+                            <TextBlock x:Name="HistoryText" Margin="0,0,0,3" TextWrapping="Wrap" />
+                            <TextBlock x:Name="MotionText" TextWrapping="Wrap" />
+                            <TextBlock Text="Privacy Mode changes the running interface; it is not an encryption algorithm. Optional disk history remains off by default."
                                        Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,9,0,0" />
                         </StackPanel>
                     </Border>
