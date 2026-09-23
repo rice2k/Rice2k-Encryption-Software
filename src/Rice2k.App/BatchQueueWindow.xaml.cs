@@ -15,16 +15,21 @@ public partial class BatchQueueWindow : Window
     private readonly PasswordGeneratorService _passwordGenerator = new();
     private CancellationTokenSource? _batchCts;
     private bool _closeWhenFinished;
+    private bool _isScanning;
 
-    public BatchQueueWindow(IEnumerable<string>? initialFiles = null)
+    private sealed record FolderScanResult(IReadOnlyList<string> Files, int SkippedFolders);
+
+    public BatchQueueWindow(IEnumerable<string>? initialPaths = null)
     {
         InitializeComponent();
         BatchQueueGrid.ItemsSource = _items;
-
-        if (initialFiles is not null)
-            AddFiles(initialFiles);
-
         UpdateQueueCount();
+
+        var queuedInitialPaths = initialPaths?.ToArray();
+        if (queuedInitialPaths is { Length: > 0 })
+        {
+            Loaded += async (_, _) => await AddPathsAsync(queuedInitialPaths);
+        }
     }
 
     private void AddFiles_Click(object sender, RoutedEventArgs e)
@@ -40,9 +45,21 @@ public partial class BatchQueueWindow : Window
             AddFiles(dialog.FileNames);
     }
 
+    private async void AddFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Choose a folder whose files should be added to the batch queue",
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog(this) == true)
+            await AddPathsAsync([dialog.FolderName]);
+    }
+
     private void RemoveSelected_Click(object sender, RoutedEventArgs e)
     {
-        if (_batchCts is not null)
+        if (_batchCts is not null || _isScanning)
             return;
 
         var selected = BatchQueueGrid.SelectedItems.Cast<BatchQueueItem>().ToList();
@@ -54,7 +71,7 @@ public partial class BatchQueueWindow : Window
 
     private void ClearQueue_Click(object sender, RoutedEventArgs e)
     {
-        if (_batchCts is not null)
+        if (_batchCts is not null || _isScanning)
             return;
 
         _items.Clear();
@@ -72,13 +89,63 @@ public partial class BatchQueueWindow : Window
         e.Handled = true;
     }
 
-    private void Window_Drop(object sender, DragEventArgs e)
+    private async void Window_Drop(object sender, DragEventArgs e)
     {
-        if (_batchCts is not null)
+        if (_batchCts is not null || _isScanning)
             return;
 
         if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
-            AddFiles(paths.Where(File.Exists));
+            await AddPathsAsync(paths);
+    }
+
+    private async Task AddPathsAsync(IEnumerable<string> paths)
+    {
+        if (_batchCts is not null || _isScanning)
+            return;
+
+        var pathList = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var directFiles = pathList.Where(File.Exists).ToArray();
+        var directories = pathList.Where(Directory.Exists).ToArray();
+
+        if (directFiles.Length > 0)
+            AddFiles(directFiles);
+
+        if (directories.Length == 0)
+            return;
+
+        _isScanning = true;
+        SetQueueEditing(false);
+        var skippedFolders = 0;
+        var foundFiles = new List<string>();
+
+        try
+        {
+            for (var index = 0; index < directories.Length; index++)
+            {
+                var directory = directories[index];
+                BatchStatusText.Text = $"Scanning folder {index + 1} of {directories.Length}…";
+                BatchProgressDetails.Text = directory;
+
+                var result = await Task.Run(() => ScanFolder(directory));
+                foundFiles.AddRange(result.Files);
+                skippedFolders += result.SkippedFolders;
+            }
+
+            AddFiles(foundFiles);
+
+            var skipText = skippedFolders > 0
+                ? $" {skippedFolders} inaccessible or reparse-point folder(s) were skipped."
+                : string.Empty;
+
+            BatchStatusText.Text = "Folder scan complete";
+            BatchProgressDetails.Text = $"Found {foundFiles.Count:N0} file(s) in the selected folder(s).{skipText}";
+        }
+        finally
+        {
+            _isScanning = false;
+            SetQueueEditing(true);
+            UpdateQueueCount();
+        }
     }
 
     private void AddFiles(IEnumerable<string> paths)
@@ -106,7 +173,7 @@ public partial class BatchQueueWindow : Window
 
         UpdateQueueCount();
 
-        if (added > 0)
+        if (added > 0 && !_isScanning)
         {
             BatchStatusText.Text = "Ready";
             BatchProgressDetails.Text = $"Added {added} file(s). Review the queue, choose a password, then start the batch.";
@@ -121,6 +188,69 @@ public partial class BatchQueueWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
         }
+    }
+
+    private static FolderScanResult ScanFolder(string rootPath)
+    {
+        var files = new List<string>();
+        var skippedFolders = 0;
+        var pending = new Stack<DirectoryInfo>();
+        pending.Push(new DirectoryInfo(rootPath));
+
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+
+            try
+            {
+                if ((current.Attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    skippedFolders++;
+                    continue;
+                }
+
+                try
+                {
+                    files.AddRange(current.EnumerateFiles().Select(file => file.FullName));
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+                {
+                    skippedFolders++;
+                    continue;
+                }
+
+                try
+                {
+                    foreach (var directory in current.EnumerateDirectories())
+                    {
+                        try
+                        {
+                            if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                            {
+                                skippedFolders++;
+                                continue;
+                            }
+
+                            pending.Push(directory);
+                        }
+                        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+                        {
+                            skippedFolders++;
+                        }
+                    }
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+                {
+                    skippedFolders++;
+                }
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                skippedFolders++;
+            }
+        }
+
+        return new FolderScanResult(files, skippedFolders);
     }
 
     private void BatchPassword_Changed(object sender, RoutedEventArgs e)
@@ -160,7 +290,7 @@ public partial class BatchQueueWindow : Window
         if (!ValidatePassword())
             return;
 
-        if (_batchCts is not null)
+        if (_batchCts is not null || _isScanning)
             return;
 
         foreach (var item in _items)
@@ -324,19 +454,26 @@ public partial class BatchQueueWindow : Window
 
     private void SetRunning(bool running)
     {
-        StartBatchButton.IsEnabled = !running && _items.Count > 0;
+        StartBatchButton.IsEnabled = !running && !_isScanning && _items.Count > 0;
         CancelBatchButton.IsEnabled = running;
-        AddFilesButton.IsEnabled = !running;
-        RemoveSelectedButton.IsEnabled = !running;
-        ClearQueueButton.IsEnabled = !running;
-        BatchQueueGrid.IsEnabled = !running;
+        SetQueueEditing(!running && !_isScanning);
+    }
+
+    private void SetQueueEditing(bool enabled)
+    {
+        AddFilesButton.IsEnabled = enabled;
+        AddFolderButton.IsEnabled = enabled;
+        RemoveSelectedButton.IsEnabled = enabled;
+        ClearQueueButton.IsEnabled = enabled;
+        BatchQueueGrid.IsEnabled = enabled;
+        StartBatchButton.IsEnabled = enabled && _items.Count > 0 && _batchCts is null;
     }
 
     private void UpdateQueueCount()
     {
         var totalBytes = _items.Sum(item => item.SizeBytes);
         QueueCountText.Text = $"{_items.Count} file(s) in queue  •  {FormatBytes(totalBytes)} total";
-        StartBatchButton.IsEnabled = _batchCts is null && _items.Count > 0;
+        StartBatchButton.IsEnabled = _batchCts is null && !_isScanning && _items.Count > 0;
     }
 
     private void ShowFriendlyError(string message)
