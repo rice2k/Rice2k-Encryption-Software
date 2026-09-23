@@ -57,9 +57,9 @@ public partial class MainWindow
         if (_operationCts is null || sender is not Button button)
             return;
 
-        if (_fileCrypto.IsPaused)
+        if (ActiveCryptoIsPaused())
         {
-            _fileCrypto.Resume();
+            ResumeActiveCrypto();
             button.Content = "Pause";
 
             if (ReferenceEquals(button, _encryptPauseButton))
@@ -77,7 +77,7 @@ public partial class MainWindow
         }
         else
         {
-            _fileCrypto.Pause();
+            PauseActiveCrypto();
             button.Content = "Resume";
 
             if (ReferenceEquals(button, _encryptPauseButton))
@@ -95,6 +95,25 @@ public partial class MainWindow
         }
     }
 
+    private bool ActiveCryptoIsPaused() =>
+        _keyFileOperationActive ? _keyFileCrypto.IsPaused : _fileCrypto.IsPaused;
+
+    private void PauseActiveCrypto()
+    {
+        if (_keyFileOperationActive)
+            _keyFileCrypto.Pause();
+        else
+            _fileCrypto.Pause();
+    }
+
+    private void ResumeActiveCrypto()
+    {
+        if (_keyFileOperationActive)
+            _keyFileCrypto.Resume();
+        else
+            _fileCrypto.Resume();
+    }
+
     private void SyncPauseButton(Button? button, bool operationRunning)
     {
         if (button is null)
@@ -104,6 +123,7 @@ public partial class MainWindow
         if (!operationRunning)
         {
             _fileCrypto.Resume();
+            _keyFileCrypto.Resume();
             button.Content = "Pause";
         }
     }
