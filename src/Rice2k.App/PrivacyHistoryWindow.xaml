@@ -1,0 +1,64 @@
+<Window x:Class="Rice2k.Encryption.PrivacyHistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rice2k Stored Privacy History"
+        Width="900" Height="680"
+        MinWidth="720" MinHeight="520"
+        WindowStartupLocation="CenterOwner"
+        AutomationProperties.Name="Rice2k stored privacy history">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="Stored Privacy History" FontSize="28" FontWeight="SemiBold" />
+            <TextBlock Text="These optional local records are stored only when you enable them in Settings. Recent files can contain full local paths; persistent activity is intentionally redacted to action names only."
+                       Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,5,0,0" />
+        </StackPanel>
+
+        <Border Grid.Row="1" x:Name="PrivacyBanner" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+            <TextBlock Text="Privacy Mode is ON. Stored-history contents are hidden in this window. You can still clear them below, or turn Privacy Mode off to review them."
+                       Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock Text="Recent files" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="1" Text="Full local paths are stored only when Remember recent files is enabled."
+                               Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,10" />
+                    <ListBox Grid.Row="2" x:Name="RecentFilesList" AutomationProperties.Name="Stored recent files" />
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock Text="Redacted activity" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="1" Text="Only action names and timestamps are stored. Filenames, paths, plaintext, passwords, keys, and recovery secrets are excluded."
+                               Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,10" />
+                    <ListBox Grid.Row="2" x:Name="ActivityList" AutomationProperties.Name="Stored redacted activity" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="0,14,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText" Text="Ready" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center"
+                       AutomationProperties.Name="Stored history status" AutomationProperties.LiveSetting="Polite" />
+            <WrapPanel Grid.Column="1">
+                <Button Content="Clear Recent Files" Click="ClearRecent_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                <Button Content="Clear Activity" Click="ClearActivity_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                <Button Content="Clear All Stored History" Click="ClearAll_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                <Button Content="Close" Click="Close_Click" />
+            </WrapPanel>
+        </Grid>
+    </Grid>
+</Window>
