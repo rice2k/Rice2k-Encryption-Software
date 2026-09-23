@@ -10,24 +10,32 @@ During stabilization, new major features should not be added unless they are req
 
 ## Beta readiness checklist
 
-### 1. Build the complete solution on Windows + .NET 10 — **IN PROGRESS**
+### 1. Build the complete solution on Windows + .NET 10 — **BLOCKED ON RUNNER / LOCAL WINDOWS VALIDATION AVAILABLE**
 
-Required command sequence:
+Recommended command:
+
+```powershell
+PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1
+```
+
+The validator runs the equivalent of:
 
 ```powershell
 dotnet --info
 dotnet restore Rice2kEncryption.sln
-dotnet build Rice2kEncryption.sln --configuration Release --no-restore
+dotnet build Rice2kEncryption.sln --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+dotnet test tests\Rice2k.Tests\Rice2k.Tests.csproj --configuration Release --no-build
 ```
 
 Pass criteria:
+- the pinned .NET 10 SDK environment is recorded;
 - `dotnet restore` succeeds;
 - Release build succeeds for the complete solution;
 - no unresolved compile errors;
 - warnings are reviewed and security/data-safety-relevant warnings are fixed before Beta;
 - exact SDK/runtime and build result are recorded below.
 
-Current result: **Not passed yet.** Prior GitHub-hosted jobs were created but executed zero workflow steps. Automatic Windows validation is being enabled so this gate can be retried.
+Current result: **Not passed yet.** Automatic GitHub validation now triggers on pushes to `main`, but observed jobs still report `runner_id: 0`, empty runner name/group, `steps: []`, and no downloadable step log. This is `R2K-CI-001`, not a compiler result.
 
 ### 2. Execute the complete automated security/regression suite — **NOT STARTED AS A VALIDATED RUN**
 
@@ -75,14 +83,28 @@ Append each attempted validation; do not erase failures.
 
 | Date (UTC) | Version/commit | Environment | Stage | Result | Notes |
 |---|---|---|---|---|---|
-| 2026-09-23 | 0.6.0-preview.2/.3-era commits | GitHub hosted Actions | Runner assignment | Failed before execution | Multiple jobs were created with zero executed steps; no compiler/test result was produced. |
-| 2026-09-23 | 0.6.0-preview.4 | Current ChatGPT working container | SDK availability | Blocked | `dotnet` SDK is not installed in the working container, so it cannot be used as the supported Windows build environment. |
+| 2026-09-23 | 0.6.0-preview.2/.3-era commits | GitHub hosted Actions | Runner assignment | Failed before execution | Multiple earlier jobs were created with zero executed steps; no compiler/test result was produced. |
+| 2026-09-23 | 0.6.0-preview.4 | Current ChatGPT working container | SDK availability | Blocked | `dotnet` SDK is not installed and outbound DNS/download is unavailable in the working container, so it cannot be converted into the supported Windows build environment. |
+| 2026-09-23 | commit `3d4764f0e2b623c18e6855be755b8940f0a702e6` | GitHub Actions `windows-latest` | Automatic push validation | Failed before execution | Run `35907363363`, job `107338276220`; job completed in ~2 seconds with zero steps and no runner execution. |
+| 2026-09-23 | commit `1e3853afd5062842da77595b07f7c12e70080061` | GitHub Actions `windows-latest` | Automatic push validation | Failed before execution | Run `35907842065`, job `107339876446`; `runner_id: 0`, empty runner name/group, `steps: []`; no compiler/test result. |
+
+## Local validation artifact policy
+
+`tools/Validate-Rice2k.ps1` writes each local attempt to:
+
+```text
+artifacts\validation\<timestamp>\
+```
+
+Each attempt gets separate SDK/restore/build/test logs and `VALIDATION-SUMMARY.md`. `artifacts/` is git-ignored by default. Successful and failed attempts should be summarized back into this table when they are used as release evidence.
 
 ## Bug/release records
 
 - Version history: [`RELEASE-HISTORY.md`](RELEASE-HISTORY.md)
 - Known errors/bugs/fixes: [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)
+- Release recording rules: [`RELEASE-PROCESS.md`](RELEASE-PROCESS.md)
 - Detailed change log: [`../CHANGELOG.md`](../CHANGELOG.md)
+- Stabilization umbrella: GitHub Issue #8
 - Security test work: GitHub Issue #6
 - Packaging/release work: GitHub Issue #7
 
