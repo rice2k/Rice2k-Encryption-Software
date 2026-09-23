@@ -97,7 +97,7 @@
                         <TextBlock Text="Validation status" FontSize="18" FontWeight="SemiBold" />
                         <TextBlock Text="⚠ Source-controlled regression tests exist, but this preview is not being presented as validated until the supported Windows/.NET 10 build and test gates execute successfully."
                                    Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,9,0,0" />
-                        <TextBlock Text="A failed GitHub Actions job with zero executed steps is treated as runner/infrastructure failure, not as a successful or failed source compilation."
+                        <TextBlock Text="Security Center reports local configuration only. Check the project's current CI/release records for the latest build, test, signing, and independent-review status."
                                    Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,7,0,0" />
                     </StackPanel>
                 </Border>
