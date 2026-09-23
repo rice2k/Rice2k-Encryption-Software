@@ -26,6 +26,8 @@ public sealed class FileSignatureServiceTests
         Assert.Equal(identity.Fingerprint, result.SignerFingerprint);
         Assert.Equal(identity.Id, result.SignerIdentityId);
         Assert.Equal("archive.zip", result.OriginalFileName);
+        Assert.InRange(new FileInfo(signature).Length, 1, 128 * 1024);
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
     }
 
     [Fact]
@@ -130,6 +132,27 @@ public sealed class FileSignatureServiceTests
             signatures.SignAsync(file, signature, identity));
 
         Assert.Equal(before, await File.ReadAllBytesAsync(signature));
+    }
+
+    [Fact]
+    public async Task Sign_PreCancelled_LeavesNoFinalOrPartialOutput()
+    {
+        using var temp = new TempDirectory();
+        var identities = new IdentityService();
+        var signatures = new FileSignatureService();
+        using var identity = identities.Generate("Alice");
+        var file = temp.PathFor("cancel.txt");
+        var signature = temp.PathFor("cancel.txt.r2ksig");
+        await File.WriteAllTextAsync(file, "cancel before signing");
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            signatures.SignAsync(file, signature, identity, cts.Token));
+
+        Assert.True(File.Exists(file));
+        Assert.False(File.Exists(signature));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
     }
 
     private sealed class TempDirectory : IDisposable
