@@ -5,7 +5,7 @@
         <Border Style="{StaticResource CardStyle}">
             <StackPanel>
                 <TextBlock Text="Find a setting" FontSize="18" FontWeight="SemiBold" />
-                <TextBlock Text="Search by words such as hints, tour, simple, verify, privacy, or advanced." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,10" />
+                <TextBlock Text="Search by words such as hints, tour, simple, verify, privacy, clipboard, or advanced." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,10" />
                 <TextBox x:Name="SettingsSearchBox" TextChanged="SettingsSearchBox_TextChanged" ToolTip="Search Rice2k settings" />
                 <TextBlock x:Name="SearchStatusText" Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,6,0,0" />
             </StackPanel>
@@ -43,11 +43,50 @@
             </StackPanel>
         </Border>
 
-        <Border x:Name="PrivacyCard" Style="{StaticResource CardStyle}" Tag="privacy clipboard lock auto lock history filenames recent files local offline planned">
+        <Border x:Name="PrivacyCard" Style="{StaticResource CardStyle}" Tag="privacy clipboard clear lock auto lock history filenames previews recent files local offline">
             <StackPanel>
                 <TextBlock Text="Privacy controls" FontSize="18" FontWeight="SemiBold" />
-                <TextBlock Text="Privacy Mode, clipboard auto-clear, recent-file controls, and automatic locking are planned for the privacy milestone." Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
-                <TextBlock Text="Current development behavior: activity history is session-only and does not record passwords, plaintext, or secret keys." Foreground="{StaticResource SuccessBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
+                <CheckBox x:Name="PrivacyModeCheck"
+                          Content="Privacy Mode — hide session activity and clear transient sensitive previews"
+                          Checked="PrivacyPreference_Changed"
+                          Unchecked="PrivacyPreference_Changed"
+                          Foreground="{StaticResource TextBrush}"
+                          Margin="0,12,0,5" />
+                <TextBlock Text="Privacy Mode does not change your encrypted files. It reduces sensitive information visible in the running interface." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
+
+                <CheckBox x:Name="HideActivityCheck"
+                          Content="Hide and clear Activity entries while Privacy Mode is on"
+                          Checked="PrivacyPreference_Changed"
+                          Unchecked="PrivacyPreference_Changed"
+                          Foreground="{StaticResource TextBrush}"
+                          Margin="0,12,0,4" />
+                <CheckBox x:Name="ClearPreviewsCheck"
+                          Content="Clear text/password previews when Privacy Mode turns on"
+                          Checked="PrivacyPreference_Changed"
+                          Unchecked="PrivacyPreference_Changed"
+                          Foreground="{StaticResource TextBrush}" />
+
+                <TextBlock Text="Clipboard auto-clear" FontWeight="SemiBold" Margin="0,16,0,5" />
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <ComboBox x:Name="ClipboardSecondsCombo" SelectionChanged="ClipboardSeconds_Changed" ToolTip="How long Rice2k-owned clipboard values remain before automatic clearing">
+                        <ComboBoxItem Content="Never" Tag="0" />
+                        <ComboBoxItem Content="15 seconds" Tag="15" />
+                        <ComboBoxItem Content="30 seconds" Tag="30" />
+                        <ComboBoxItem Content="1 minute" Tag="60" />
+                        <ComboBoxItem Content="2 minutes" Tag="120" />
+                    </ComboBox>
+                    <Button Grid.Column="1" Content="Clear Clipboard Now" Click="ClearClipboardNow_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" MinWidth="160" />
+                </Grid>
+                <TextBlock Text="Auto-clear only removes a value if the clipboard still contains the exact value Rice2k copied. It will not intentionally erase something you copied afterward in another application." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0" />
+
+                <CheckBox x:Name="LockOnMinimizeCheck"
+                          Content="Lock Rice2k when the main window is minimized (coming next in v0.6)"
+                          IsEnabled="False"
+                          Foreground="{StaticResource MutedTextBrush}"
+                          Margin="0,14,0,0" />
+
+                <TextBlock x:Name="PrivacyStatusText" Text="Activity history remains session-only and Rice2k operates locally/offline by design." Foreground="{StaticResource SuccessBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0" />
             </StackPanel>
         </Border>
     </StackPanel>
