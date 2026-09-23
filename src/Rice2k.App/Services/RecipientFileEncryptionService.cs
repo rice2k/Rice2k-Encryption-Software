@@ -20,6 +20,7 @@ public sealed class RecipientFileEncryptionService
     private const int AuthenticationTagSize = 16;
     private const int MaximumRecipients = 64;
     private const int MaximumRecipientFingerprintLength = 100;
+    private const int MaximumOriginalNameCharacters = 1024;
     private const int MaximumWrappedKeyLength = 256;
     private const int MaximumSupportedChunkSize = 64 * 1024 * 1024;
     private const int MaximumMetadataCipherLength = 128 * 1024;
@@ -72,6 +73,9 @@ public sealed class RecipientFileEncryptionService
         ValidateRecipients(recipientList);
 
         var sourceInfo = new FileInfo(sourcePath);
+        if (!IsValidOriginalName(sourceInfo.Name))
+            throw new IOException("The source filename cannot be represented safely in Rice2k recipient metadata.");
+
         var tempPath = CreateUniqueTempPath(destinationPath);
         var contentKey = RandomNumberGenerator.GetBytes(ContentKeySize);
         var stopwatch = Stopwatch.StartNew();
@@ -86,9 +90,7 @@ public sealed class RecipientFileEncryptionService
             }
 
             var headerAuth = BuildHeaderAuthenticationData(DefaultChunkSize, wrappedKeys);
-            var chunkCount = sourceInfo.Length == 0
-                ? 0
-                : (sourceInfo.Length + DefaultChunkSize - 1) / DefaultChunkSize;
+            var chunkCount = ComputeExpectedChunkCount(sourceInfo.Length, DefaultChunkSize);
             var metadata = new FileMetadata(
                 sourceInfo.Name,
                 sourceInfo.Length,
@@ -228,7 +230,7 @@ public sealed class RecipientFileEncryptionService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(recipientIdentity);
-        ValidateSourceAndDestination(sourcePath, destinationPath, requireSourceOnly: false);
+        ValidateSourceAndDestination(sourcePath, destinationPath);
 
         var tempPath = CreateUniqueTempPath(destinationPath);
         var encryptionPrivate = recipientIdentity.CopyEncryptionPrivateKey();
@@ -466,6 +468,9 @@ public sealed class RecipientFileEncryptionService
         byte[] metadataNonce,
         byte[] metadataCipher)
     {
+        if (metadataCipher.Length < AuthenticationTagSize || metadataCipher.Length > MaximumMetadataCipherLength)
+            throw new InvalidDataException("The recipient metadata length is outside the supported R2KENC03 format range.");
+
         writer.Write(Magic);
         writer.Write(Version);
         writer.Write(AlgorithmXChaCha20Poly1305);
@@ -592,8 +597,8 @@ public sealed class RecipientFileEncryptionService
 
     private static void ValidateMetadata(FileMetadata metadata, Header header)
     {
-        if (string.IsNullOrWhiteSpace(metadata.OriginalName))
-            throw new InvalidDataException("Recipient-encrypted metadata does not contain an original filename.");
+        if (!IsValidOriginalName(metadata.OriginalName))
+            throw new InvalidDataException("Recipient-encrypted metadata contains an invalid original filename.");
         if (metadata.OriginalLength < 0 || metadata.ChunkCount < 0)
             throw new InvalidDataException("Recipient-encrypted metadata contains invalid file lengths.");
         if (metadata.ChunkSize != header.ChunkSize)
@@ -614,12 +619,23 @@ public sealed class RecipientFileEncryptionService
         if (metadata.Recipients.Select(recipient => recipient.Fingerprint).Distinct(StringComparer.Ordinal).Count() != metadata.Recipients.Count)
             throw new InvalidDataException("Recipient-encrypted metadata contains duplicate recipient fingerprints.");
 
-        var expectedChunks = metadata.OriginalLength == 0
-            ? 0
-            : (metadata.OriginalLength + metadata.ChunkSize - 1) / metadata.ChunkSize;
+        var expectedChunks = ComputeExpectedChunkCount(metadata.OriginalLength, metadata.ChunkSize);
         if (metadata.ChunkCount != expectedChunks)
             throw new InvalidDataException("Recipient-encrypted metadata contains an inconsistent chunk count.");
     }
+
+    private static long ComputeExpectedChunkCount(long length, int chunkSize)
+    {
+        if (length < 0 || chunkSize <= 0)
+            throw new InvalidDataException("Recipient-encrypted metadata contains invalid chunk parameters.");
+        return length == 0 ? 0 : 1 + ((length - 1) / chunkSize);
+    }
+
+    private static bool IsValidOriginalName(string? name) =>
+        !string.IsNullOrWhiteSpace(name) &&
+        name.Length <= MaximumOriginalNameCharacters &&
+        name.IndexOf('/') < 0 &&
+        name.IndexOf('\\') < 0;
 
     private static void ValidateRecipients(IReadOnlyList<Rice2kPublicIdentity> recipients)
     {
@@ -650,8 +666,7 @@ public sealed class RecipientFileEncryptionService
 
     private static void ValidateSourceAndDestination(
         string sourcePath,
-        string destinationPath,
-        bool requireSourceOnly = true)
+        string destinationPath)
     {
         if (!File.Exists(sourcePath))
             throw new FileNotFoundException("The source file could not be found.", sourcePath);
