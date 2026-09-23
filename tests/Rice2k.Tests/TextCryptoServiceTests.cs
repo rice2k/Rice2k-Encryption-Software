@@ -6,6 +6,7 @@ namespace Rice2k.Tests;
 public sealed class TextCryptoServiceTests
 {
     private const string Password = "correct horse battery staple 2026";
+    private const int MaximumSupportedPlaintextBytes = 12_582_845;
     private readonly TextCryptoService _service = new();
 
     [Fact]
@@ -32,6 +33,17 @@ public sealed class TextCryptoServiceTests
         Assert.NotEqual(first, second);
         Assert.Equal(plaintext, _service.Decrypt(first, Password));
         Assert.Equal(plaintext, _service.Decrypt(second, Password));
+    }
+
+    [Fact]
+    public void Encrypt_OversizedPlaintext_IsRejectedBeforeEncryption()
+    {
+        var oversized = new string('A', MaximumSupportedPlaintextBytes + 1);
+
+        var error = Assert.Throws<ArgumentException>(() =>
+            _service.Encrypt(oversized, Password));
+
+        Assert.Contains("too large", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
