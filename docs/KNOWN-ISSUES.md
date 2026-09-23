@@ -26,6 +26,7 @@ This is the permanent engineering register for errors, bugs, release blockers, a
 
 | ID | Severity | Fixed in | Description / resolution |
 |---|---|---|---|
+| R2K-SET-003 | Medium | 0.6.0-preview.4 stabilization source | Optional-history checkboxes were wired to the broad Privacy handler in XAML and also received a dedicated history handler at runtime, causing duplicate settings writes and an intermediate callback with stale history values. The legacy handlers are now detached before the dedicated history handlers are attached. |
 | R2K-UI-001 | Low | 0.6.0-preview.4 stabilization source | Legacy `MainWindow.xaml.cs` contains milestone-era `v0.2-dev` status suffixes. The version-status partial now normalizes those user-visible strings to the actual assembly informational version. Large-file source decomposition/cleanup can happen later without exposing the stale version to users. |
 | R2K-UI-002 | Medium | 0.6.0-preview.4 stabilization source | Replaced user-visible stale drag/drop behavior via a routed `OnDrop` override: one normal file routes to Encrypt, one `.r2kenc` routes to Decrypt, folders/multiple normal files open the implemented Batch Queue, and multiple encrypted containers receive accurate guidance instead of claiming batch support is a future milestone. |
 | R2K-SET-001 | High compile risk | 0.6.0-preview.4 source | Settings XAML exposed `ReduceMotion_Changed` and `ReviewStoredHistory_Click` without corresponding handlers. Added code-behind integration. |
