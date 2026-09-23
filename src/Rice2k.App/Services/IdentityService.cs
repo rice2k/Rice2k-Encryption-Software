@@ -15,8 +15,11 @@ public sealed class IdentityService
     private const int MemLimit = 64 * 1024 * 1024;
     private const int SaltSize = 16;
     private const int NonceSize = 24;
+    private const int AuthenticationTagSize = 16;
     private const int MinimumPasswordLength = 12;
+    private const int MaximumIdentityNameCharacters = 200;
     private const int MaximumPrivateCipherLength = 128 * 1024;
+    private const int MaximumPrivatePayloadLength = MaximumPrivateCipherLength - AuthenticationTagSize;
     private const int MaximumPublicCardLength = 64 * 1024;
     private const long MaximumSupportedOpsLimit = 10;
     private const int MaximumSupportedMemLimit = 256 * 1024 * 1024;
@@ -44,6 +47,7 @@ public sealed class IdentityService
 
     public Rice2kIdentity Generate(string name)
     {
+        ValidateIdentityName(name);
         var encryption = PublicKeyBox.GenerateKeyPair();
         var signing = PublicKeyAuth.GenerateKeyPair();
         try
@@ -71,6 +75,7 @@ public sealed class IdentityService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        ValidateIdentityName(identity.Name);
         ValidateNewPassword(password);
         ValidateNewDestination(destinationPath, ".r2kid");
 
@@ -94,7 +99,10 @@ public sealed class IdentityService
                 Convert.ToBase64String(identity.SigningPublicKey),
                 Convert.ToBase64String(signingPrivate));
             payloadBytes = JsonSerializer.SerializeToUtf8Bytes(payload);
+            if (payloadBytes.Length > MaximumPrivatePayloadLength)
+                throw new InvalidDataException("The private identity metadata is too large for the Rice2k identity-package format.");
 
+            cancellationToken.ThrowIfCancellationRequested();
             var salt = PasswordHash.ArgonGenerateSalt();
             var nonce = SecretAeadXChaCha20Poly1305.GenerateNonce();
             derivedKey = PasswordHash.ArgonHashBinary(
@@ -109,6 +117,8 @@ public sealed class IdentityService
                 nonce,
                 derivedKey,
                 BuildPrivateAad(OpsLimit, MemLimit, salt));
+            if (cipher.Length > MaximumPrivateCipherLength)
+                throw new InvalidOperationException("Rice2k generated a private identity package outside its supported format limit.");
 
             await using (var output = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
             using (var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true))
@@ -199,7 +209,7 @@ public sealed class IdentityService
                 throw new InvalidDataException("The identity-package header is truncated.");
 
             var cipherLength = reader.ReadInt32();
-            if (cipherLength < 16 || cipherLength > MaximumPrivateCipherLength)
+            if (cipherLength < AuthenticationTagSize || cipherLength > MaximumPrivateCipherLength)
                 throw new InvalidDataException("The encrypted identity payload length is invalid.");
             cipher = reader.ReadBytes(cipherLength);
             if (cipher.Length != cipherLength || input.Position != input.Length)
@@ -229,6 +239,7 @@ public sealed class IdentityService
 
             var payload = JsonSerializer.Deserialize<PrivateIdentityPayload>(plain)
                 ?? throw new InvalidDataException("The decrypted identity package is missing its identity data.");
+            ValidateIdentityName(payload.Name);
 
             encryptionPublic = DecodeKey(payload.EncryptionPublicKeyBase64, 32, "encryption public key");
             encryptionPrivate = DecodeKey(payload.EncryptionPrivateKeyBase64, 32, "encryption private key");
@@ -279,11 +290,13 @@ public sealed class IdentityService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        ValidateIdentityName(identity.Name);
         ValidateNewDestination(destinationPath, ".r2kpub");
 
         var privateSigning = identity.CopySigningPrivateKey();
         byte[]? payloadToSign = null;
         byte[]? signature = null;
+        byte[]? cardBytes = null;
         var tempPath = destinationPath + $".{Guid.NewGuid():N}.partial";
 
         try
@@ -307,12 +320,16 @@ public sealed class IdentityService
                 Convert.ToBase64String(identity.EncryptionPublicKey),
                 Convert.ToBase64String(identity.SigningPublicKey),
                 Convert.ToBase64String(signature));
+            cardBytes = JsonSerializer.SerializeToUtf8Bytes(card, new JsonSerializerOptions { WriteIndented = true });
+            if (cardBytes.Length <= 0 || cardBytes.Length > MaximumPublicCardLength)
+                throw new InvalidDataException("The public identity card is too large for the supported Rice2k public-card format.");
 
-            await File.WriteAllTextAsync(
-                tempPath,
-                JsonSerializer.Serialize(card, new JsonSerializerOptions { WriteIndented = true }),
-                Encoding.UTF8,
-                cancellationToken);
+            await using (var output = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
+            {
+                await output.WriteAsync(cardBytes, cancellationToken);
+                await output.FlushAsync(cancellationToken);
+                output.Flush(flushToDisk: true);
+            }
 
             cancellationToken.ThrowIfCancellationRequested();
             if (File.Exists(destinationPath))
@@ -331,6 +348,8 @@ public sealed class IdentityService
                 CryptographicOperations.ZeroMemory(payloadToSign);
             if (signature is not null)
                 CryptographicOperations.ZeroMemory(signature);
+            if (cardBytes is not null)
+                CryptographicOperations.ZeroMemory(cardBytes);
         }
     }
 
@@ -359,8 +378,7 @@ public sealed class IdentityService
 
         if (!string.Equals(card.Format, "R2KPUB1", StringComparison.Ordinal) || card.Version != 1)
             throw new NotSupportedException("This public identity format is not supported by this Rice2k build.");
-        if (string.IsNullOrWhiteSpace(card.Name) || card.Name.Length > 200)
-            throw new InvalidDataException("The public identity contains an invalid display name.");
+        ValidateIdentityName(card.Name);
 
         var encryptionPublic = DecodeKey(card.EncryptionPublicKeyBase64, 32, "encryption public key");
         var signingPublic = DecodeKey(card.SigningPublicKeyBase64, 32, "signing public key");
@@ -482,6 +500,12 @@ public sealed class IdentityService
             throw new InvalidDataException($"The identity contains an invalid {label} length.");
         }
         return decoded;
+    }
+
+    private static void ValidateIdentityName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaximumIdentityNameCharacters)
+            throw new InvalidDataException($"Rice2k identity names must contain 1 to {MaximumIdentityNameCharacters} characters.");
     }
 
     private static void ValidateNewPassword(string password)
