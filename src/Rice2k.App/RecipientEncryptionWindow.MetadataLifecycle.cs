@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using Microsoft.Win32;
 using Rice2k.Encryption.Models;
 
@@ -17,10 +16,10 @@ public partial class RecipientEncryptionWindow
         if (_metadataLifecycleInitialized)
             return;
 
-        _addRecipientButton = FindRecipientVisualChildren<Button>(this)
+        _addRecipientButton = FindRecipientLogicalChildren<Button>(this)
             .FirstOrDefault(button => string.Equals(button.Content?.ToString(), "Add Public Identity…", StringComparison.Ordinal));
 
-        _inspectRecipientFileButton = FindRecipientVisualChildren<Button>(this)
+        _inspectRecipientFileButton = FindRecipientLogicalChildren<Button>(this)
             .FirstOrDefault(button =>
                 string.Equals(button.Content?.ToString(), "Browse…", StringComparison.Ordinal) &&
                 button.Parent is Grid grid &&
@@ -177,18 +176,15 @@ public partial class RecipientEncryptionWindow
         }
     }
 
-    private static IEnumerable<T> FindRecipientVisualChildren<T>(DependencyObject root) where T : DependencyObject
+    private static IEnumerable<T> FindRecipientLogicalChildren<T>(DependencyObject root) where T : DependencyObject
     {
-        if (root is null)
-            yield break;
-
-        var count = VisualTreeHelper.GetChildrenCount(root);
-        for (var index = 0; index < count; index++)
+        foreach (var child in LogicalTreeHelper.GetChildren(root))
         {
-            var child = VisualTreeHelper.GetChild(root, index);
             if (child is T match)
                 yield return match;
-            foreach (var descendant in FindRecipientVisualChildren<T>(child))
+            if (child is not DependencyObject dependencyChild)
+                continue;
+            foreach (var descendant in FindRecipientLogicalChildren<T>(dependencyChild))
                 yield return descendant;
         }
     }
