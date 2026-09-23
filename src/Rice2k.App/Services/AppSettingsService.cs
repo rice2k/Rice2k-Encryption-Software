@@ -26,6 +26,8 @@ public sealed record Rice2kAppSettings(
 
 public sealed class AppSettingsService
 {
+    private const long MaxSettingsFileBytes = 256 * 1024;
+
     private readonly string _settingsDirectory;
     private readonly string _settingsPath;
 
@@ -42,6 +44,10 @@ public sealed class AppSettingsService
         try
         {
             if (!File.Exists(_settingsPath))
+                return Normalize(new Rice2kAppSettings());
+
+            var info = new FileInfo(_settingsPath);
+            if (info.Length <= 0 || info.Length > MaxSettingsFileBytes)
                 return Normalize(new Rice2kAppSettings());
 
             var json = File.ReadAllText(_settingsPath);
