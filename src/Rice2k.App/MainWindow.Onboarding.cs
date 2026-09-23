@@ -15,6 +15,7 @@ public partial class MainWindow
         InitializeCollisionGuards();
         InitializeAccessibilityUi();
         InitializeKeyManagerUi();
+        InitializeRecoveryUi();
 
         if (_onboardingChecked)
             return;
