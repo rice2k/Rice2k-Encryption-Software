@@ -9,6 +9,7 @@ namespace Rice2k.Encryption;
 public partial class AppLockWindow : Window
 {
     private readonly AppLockCredentialService _credentialService;
+    private readonly bool _reduceMotion;
     private bool _unlocked;
     private bool _allowClose;
     private bool _busy;
@@ -17,10 +18,12 @@ public partial class AppLockWindow : Window
     public AppLockWindow(AppLockCredentialService credentialService, string reason)
     {
         _credentialService = credentialService ?? throw new ArgumentNullException(nameof(credentialService));
+        _reduceMotion = new AppSettingsService().Load().ReduceMotion;
         InitializeComponent();
         ReasonText.Text = string.IsNullOrWhiteSpace(reason)
             ? "Enter your app-lock password to continue."
             : reason;
+        BusyProgress.IsIndeterminate = !_reduceMotion;
         Loaded += (_, _) => PasswordBox.Focus();
     }
 
@@ -115,6 +118,8 @@ public partial class AppLockWindow : Window
         _busy = busy;
         PasswordBox.IsEnabled = !busy;
         UnlockButton.IsEnabled = !busy;
+        BusyProgress.IsIndeterminate = busy && !_reduceMotion;
+        BusyProgress.Value = busy && _reduceMotion ? 50 : 0;
         BusyProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
     }
 }
