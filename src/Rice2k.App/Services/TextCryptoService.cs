@@ -14,6 +14,12 @@ public sealed class TextCryptoService
     private const int AuthenticationTagSize = 16;
     private const int MinimumEncryptionPasswordLength = 12;
     private const int MaximumTokenCharacters = 16 * 1024 * 1024;
+    private const int SaltBase64Characters = 24;
+    private const int NonceBase64Characters = 32;
+    private const int FixedTokenCharacters = 7 + 3 + SaltBase64Characters + NonceBase64Characters;
+    private const int MaximumCiphertextBase64Characters = ((MaximumTokenCharacters - FixedTokenCharacters) / 4) * 4;
+    private const int MaximumCiphertextBytes = (MaximumCiphertextBase64Characters / 4) * 3;
+    private const int MaximumPlaintextBytes = MaximumCiphertextBytes - AuthenticationTagSize;
     private static readonly byte[] Aad = Encoding.ASCII.GetBytes(Prefix);
 
     public string Encrypt(string plaintext, string password)
@@ -22,6 +28,15 @@ public sealed class TextCryptoService
         if (password.Length < MinimumEncryptionPasswordLength)
             throw new ArgumentException($"Encryption passwords must contain at least {MinimumEncryptionPasswordLength} characters.", nameof(password));
 
+        var text = plaintext ?? string.Empty;
+        if (Encoding.UTF8.GetByteCount(text) > MaximumPlaintextBytes)
+        {
+            throw new ArgumentException(
+                "The text is too large for the Rice2k encrypted-text format. Use file encryption for larger content.",
+                nameof(plaintext));
+        }
+
+        var plainBytes = Encoding.UTF8.GetBytes(text);
         var salt = PasswordHash.ArgonGenerateSalt();
         var nonce = SecretAeadXChaCha20Poly1305.GenerateNonce();
         var passwordBytes = Encoding.UTF8.GetBytes(password);
@@ -38,23 +53,21 @@ public sealed class TextCryptoService
                 32,
                 PasswordHash.ArgonAlgorithm.Argon_2ID13);
 
-            var plainBytes = Encoding.UTF8.GetBytes(plaintext ?? string.Empty);
-            try
-            {
-                cipher = SecretAeadXChaCha20Poly1305.Encrypt(plainBytes, nonce, key, Aad);
-                return string.Join('.',
-                    Prefix,
-                    Convert.ToBase64String(salt),
-                    Convert.ToBase64String(nonce),
-                    Convert.ToBase64String(cipher));
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(plainBytes);
-            }
+            cipher = SecretAeadXChaCha20Poly1305.Encrypt(plainBytes, nonce, key, Aad);
+            var token = string.Join('.',
+                Prefix,
+                Convert.ToBase64String(salt),
+                Convert.ToBase64String(nonce),
+                Convert.ToBase64String(cipher));
+
+            if (token.Length > MaximumTokenCharacters)
+                throw new InvalidOperationException("Rice2k generated an encrypted text token outside its supported format limit.");
+
+            return token;
         }
         finally
         {
+            CryptographicOperations.ZeroMemory(plainBytes);
             CryptographicOperations.ZeroMemory(passwordBytes);
             if (key is not null)
                 CryptographicOperations.ZeroMemory(key);
