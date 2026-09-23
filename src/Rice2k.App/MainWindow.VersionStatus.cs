@@ -15,7 +15,16 @@ public partial class MainWindow
 
     private void InitializeVersionStatus()
     {
-        GlobalStatusText.Text = $"● Ready   |   Offline/local   |   v{GetApplicationVersion()}";
+        var version = GetApplicationVersion();
+        GlobalStatusText.Text = $"● Ready   |   Offline/local   |   v{version}";
+
+        // The legacy XAML footer still contains a milestone-era "v0.2 development"
+        // literal and has no x:Name. Replace that visible label at runtime so both
+        // status surfaces derive from the assembly informational version.
+        var sidebarVersion = FindVisualChildren<TextBlock>(this)
+            .FirstOrDefault(text => string.Equals(text.Text, "v0.2 development", StringComparison.Ordinal));
+        if (sidebarVersion is not null)
+            sidebarVersion.Text = $"v{version}";
 
         // Older MainWindow partials still contain milestone-era status messages such
         // as v0.2-dev and v0.3-dev. Normalize any legacy *-dev version token until
