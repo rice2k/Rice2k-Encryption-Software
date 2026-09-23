@@ -23,10 +23,14 @@ public partial class SecurityCenterWindow : Window
     private void RefreshStatus()
     {
         var settings = _settingsService.Load();
-        var version = Assembly.GetEntryAssembly()?.GetName().Version;
-        VersionText.Text = version is null
-            ? "Rice2k Encryption Software preview"
-            : $"Rice2k Encryption Software {version.Major}.{version.Minor}.{version.Build}";
+        var assembly = Assembly.GetEntryAssembly();
+        var informational = assembly?
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        var displayVersion = string.IsNullOrWhiteSpace(informational)
+            ? assembly?.GetName().Version?.ToString(3) ?? "preview"
+            : informational.Split('+', 2)[0];
+        VersionText.Text = $"Rice2k Encryption Software {displayVersion}";
 
         PrivacyModeText.Text = settings.PrivacyModeEnabled
             ? "✓ Privacy Mode is ON"
