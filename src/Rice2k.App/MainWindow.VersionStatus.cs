@@ -26,6 +26,22 @@ public partial class MainWindow
         if (sidebarVersion is not null)
             sidebarVersion.Text = $"v{version}";
 
+        // Do not turn source configuration into a release-validation claim. The
+        // authenticated-encryption/KDF design is configured, but the supported
+        // Windows Release build/test gates are tracked separately until executed.
+        var homeText = FindVisualChildren<TextBlock>(HomePage).ToArray();
+        var securityBadge = homeText.FirstOrDefault(text => string.Equals(text.Text, "STRONG", StringComparison.Ordinal));
+        if (securityBadge is not null)
+            securityBadge.Text = "PREVIEW";
+
+        var securitySummary = homeText.FirstOrDefault(text =>
+            string.Equals(
+                text.Text,
+                "✓ Encryption engine configured   ✓ Authenticated encryption   ✓ Argon2id",
+                StringComparison.Ordinal));
+        if (securitySummary is not null)
+            securitySummary.Text = "✓ Authenticated-encryption design configured   ✓ Argon2id   ○ Windows release validation pending";
+
         // Older MainWindow partials still contain milestone-era status messages such
         // as v0.2-dev and v0.3-dev. Normalize any legacy *-dev version token until
         // those larger files are decomposed and the literals can be removed directly.
