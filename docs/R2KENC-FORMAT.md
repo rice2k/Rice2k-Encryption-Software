@@ -14,6 +14,8 @@
 - Salt: 16 bytes
 - Nonce: 24 bytes per metadata/chunk record
 - Default chunk size: 4 MiB
+- Current Argon2id operations limit: 4
+- Current Argon2id memory limit: 64 MiB
 
 ## Binary layout
 
@@ -55,6 +57,13 @@ The metadata plaintext is serialized JSON containing values such as:
 
 The metadata is encrypted and authenticated. The public header values required for password-derived key creation remain outside the encrypted metadata.
 
+During parsing, Rice2k also checks that the authenticated metadata is internally consistent:
+
+- `OriginalName` must be present;
+- lengths and chunk counts cannot be negative;
+- metadata `ChunkSize` must match the authenticated public header;
+- `ChunkCount` must match the count implied by `OriginalLength` and `ChunkSize`.
+
 ## Associated data
 
 Metadata authentication binds these public header values:
@@ -75,6 +84,21 @@ Each chunk authenticates:
 
 This is intended to detect accidental or malicious modification, chunk reordering, duplication, or transplantation.
 
+## Defensive parser limits
+
+The KDF and chunk parameters are stored in the public header because they must be known before deriving the key. A malformed file therefore must not be allowed to request unlimited CPU or memory before authentication occurs.
+
+The current development parser rejects values outside these bounds before running Argon2id or allocating a chunk buffer:
+
+| Field | Accepted development range |
+|---|---:|
+| Argon2id operations limit | 3–10 |
+| Argon2id memory limit | 8–256 MiB |
+| Chunk size | 64 KiB–64 MiB |
+| Encrypted metadata ciphertext | 16 bytes–64 KiB |
+
+These are parser safety limits, not a promise that every future `.r2kenc` version will use the same settings. A future format version can define new bounds explicitly.
+
 ## Completion checks
 
 After decryption, Rice2k checks that:
@@ -83,6 +107,19 @@ After decryption, Rice2k checks that:
 - decoded chunk count matches encrypted metadata;
 - decoded total length matches encrypted metadata;
 - every XChaCha20-Poly1305 authentication check passed.
+
+A wrong password, modified metadata, modified chunk, missing/reordered chunk, truncation, or inconsistent authenticated metadata causes decryption to fail rather than finalize a plaintext output.
+
+## Temporary-output behavior
+
+Encryption and decryption write to a unique temporary file in the **same destination directory**. The filename is randomized and ends in `.partial`.
+
+This provides two practical properties:
+
+1. two Rice2k processes targeting similar output names do not intentionally share a deterministic temporary filename;
+2. finalization is a same-directory rename/move rather than a cross-volume copy.
+
+On failure or cancellation, Rice2k makes a best-effort attempt to delete only its incomplete temporary output. It never deletes the source file as part of this workflow.
 
 ## Versioning
 
