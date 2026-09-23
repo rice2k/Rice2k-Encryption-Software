@@ -5,41 +5,88 @@ namespace Rice2k.Tests;
 public sealed class PublicIdentityContactStoreTests
 {
     [Fact]
-    public async Task ImportAndLoad_PreservesValidatedPublicIdentity()
+    public async Task ImportLoadRemove_RoundTrip_PreservesValidatedPublicIdentity()
     {
         using var temp = new TempDirectory();
         var identityService = new IdentityService();
+        var store = new PublicIdentityContactStore(temp.ContactsDirectory);
         using var identity = identityService.Generate("Contact Test");
         var publicCard = temp.PathFor("contact.r2kpub");
         await identityService.ExportPublicAsync(identity, publicCard);
 
-        // This test verifies the card itself can survive an import/export contact path.
-        // The production store location is intentionally LocalApplicationData, so this
-        // source-controlled test validates the same public-card parser separately and
-        // avoids mutating a developer's real contact book during a test run.
-        var imported = await identityService.ImportPublicAsync(publicCard);
+        var imported = await store.ImportAsync(publicCard);
+        var loaded = await store.LoadAllAsync();
 
+        var contact = Assert.Single(loaded);
         Assert.Equal(identity.Id, imported.Id);
         Assert.Equal(identity.Fingerprint, imported.Fingerprint);
-        Assert.Equal(identity.Name, imported.Name);
-        Assert.Equal(identity.EncryptionPublicKey, imported.EncryptionPublicKey);
-        Assert.Equal(identity.SigningPublicKey, imported.SigningPublicKey);
+        Assert.Equal(identity.Id, contact.Id);
+        Assert.Equal(identity.Fingerprint, contact.Fingerprint);
+        Assert.Equal(identity.Name, contact.Name);
+        Assert.Equal(identity.EncryptionPublicKey, contact.EncryptionPublicKey);
+        Assert.Equal(identity.SigningPublicKey, contact.SigningPublicKey);
+        Assert.True(File.Exists(Path.Combine(temp.ContactsDirectory, $"{identity.Id:N}.r2kpub")));
+
+        await store.RemoveAsync(contact);
+        Assert.Empty(await store.LoadAllAsync());
     }
 
     [Fact]
-    public async Task ImportPublic_ModifiedStoredCard_IsRejected()
+    public async Task LoadAll_TamperedSavedContact_IsOmittedWithoutDeletingArtifact()
     {
         using var temp = new TempDirectory();
-        var service = new IdentityService();
-        using var identity = service.Generate("Tamper Test");
-        var card = temp.PathFor("tamper.r2kpub");
-        await service.ExportPublicAsync(identity, card);
+        var identityService = new IdentityService();
+        var store = new PublicIdentityContactStore(temp.ContactsDirectory);
+        using var identity = identityService.Generate("Tamper Test");
+        var source = temp.PathFor("tamper.r2kpub");
+        await identityService.ExportPublicAsync(identity, source);
+        await store.ImportAsync(source);
 
-        var text = await File.ReadAllTextAsync(card);
+        var savedPath = Path.Combine(temp.ContactsDirectory, $"{identity.Id:N}.r2kpub");
+        var text = await File.ReadAllTextAsync(savedPath);
         text = text.Replace("Tamper Test", "Changed Label", StringComparison.Ordinal);
-        await File.WriteAllTextAsync(card, text);
+        await File.WriteAllTextAsync(savedPath, text);
 
-        await Assert.ThrowsAnyAsync<Exception>(() => service.ImportPublicAsync(card));
+        Assert.Empty(await store.LoadAllAsync());
+        Assert.True(File.Exists(savedPath));
+    }
+
+    [Fact]
+    public async Task Import_SameValidatedContactTwice_IsIdempotent()
+    {
+        using var temp = new TempDirectory();
+        var identityService = new IdentityService();
+        var store = new PublicIdentityContactStore(temp.ContactsDirectory);
+        using var identity = identityService.Generate("Repeat Contact");
+        var source = temp.PathFor("repeat.r2kpub");
+        await identityService.ExportPublicAsync(identity, source);
+
+        var first = await store.ImportAsync(source);
+        var second = await store.ImportAsync(source);
+        var loaded = await store.LoadAllAsync();
+
+        Assert.Equal(first.Fingerprint, second.Fingerprint);
+        Assert.Single(loaded);
+    }
+
+    [Fact]
+    public async Task Remove_TamperedSavedContact_FailsClosed()
+    {
+        using var temp = new TempDirectory();
+        var identityService = new IdentityService();
+        var store = new PublicIdentityContactStore(temp.ContactsDirectory);
+        using var identity = identityService.Generate("Removal Guard");
+        var source = temp.PathFor("remove.r2kpub");
+        await identityService.ExportPublicAsync(identity, source);
+        var contact = await store.ImportAsync(source);
+
+        var savedPath = Path.Combine(temp.ContactsDirectory, $"{identity.Id:N}.r2kpub");
+        var bytes = await File.ReadAllBytesAsync(savedPath);
+        bytes[^1] ^= 0x01;
+        await File.WriteAllBytesAsync(savedPath, bytes);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => store.RemoveAsync(contact));
+        Assert.True(File.Exists(savedPath));
     }
 
     private sealed class TempDirectory : IDisposable
@@ -47,10 +94,12 @@ public sealed class PublicIdentityContactStoreTests
         public TempDirectory()
         {
             DirectoryPath = Path.Combine(Path.GetTempPath(), "Rice2k.Tests", Guid.NewGuid().ToString("N"));
+            ContactsDirectory = Path.Combine(DirectoryPath, "contacts");
             Directory.CreateDirectory(DirectoryPath);
         }
 
         public string DirectoryPath { get; }
+        public string ContactsDirectory { get; }
         public string PathFor(string fileName) => Path.Combine(DirectoryPath, fileName);
 
         public void Dispose()
