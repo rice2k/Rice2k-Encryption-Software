@@ -13,6 +13,7 @@ public partial class MainWindow
         InitializePauseButtons();
         InitializeExperienceUi();
         InitializeCollisionGuards();
+        InitializeAccessibilityUi();
 
         if (_onboardingChecked)
             return;
