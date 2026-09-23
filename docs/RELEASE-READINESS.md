@@ -12,13 +12,13 @@ During stabilization, new major features should not be added unless they are req
 
 ### 1. Build the complete solution on Windows + .NET 10 — **BLOCKED ON HOSTED RUNNER / LOCAL WINDOWS VALIDATION AVAILABLE**
 
-Recommended command:
+Recommended command from Windows PowerShell 5.1 or a newer PowerShell edition:
 
 ```powershell
 PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1
 ```
 
-The validator now runs a static WPF preflight first, followed by the equivalent of:
+The validator now runs a static WPF/source preflight first, followed by the equivalent of:
 
 ```powershell
 dotnet --info
@@ -27,8 +27,10 @@ dotnet build Rice2kEncryption.sln --configuration Release --no-restore -p:Contin
 dotnet test tests\Rice2k.Tests\Rice2k.Tests.csproj --configuration Release --no-build
 ```
 
+The source preflight checks WPF/WinForms namespace isolation, XAML handler resolution, duplicate XAML-handler definitions, duplicate lifecycle overrides, and duplicate ordinary partial-class methods using canonicalized parameter type/modifier signatures. It is an early fail-fast guard only; the compiler remains authoritative.
+
 Pass criteria:
-- static WPF XAML/partial-class preflight succeeds;
+- static WPF/source preflight succeeds;
 - the pinned .NET 10 SDK environment is recorded;
 - `dotnet restore` succeeds;
 - Release build succeeds for the complete solution;
@@ -36,7 +38,7 @@ Pass criteria:
 - warnings are reviewed and security/data-safety-relevant warnings are fixed before Beta;
 - exact SDK/runtime and build result are recorded below.
 
-Current result: **Not passed yet.** A temporary two-platform hosted-runner probe demonstrated that both `ubuntu-latest` and `windows-latest` jobs can be created but fail before any step executes, with no logs. This confirms `R2K-CI-001` is broader hosted-runner availability for this repository/account, not a Windows image or Rice2k compiler result.
+Current result: **Not passed yet.** A temporary two-platform hosted-runner probe demonstrated that both `ubuntu-latest` and `windows-latest` jobs can be created but fail before any step executes, with no logs. This confirms `R2K-CI-001` is broader hosted-runner availability for this repository/account, not a Windows image or Rice2k compiler result. The current validation workflow is manual-dispatch only so runner infrastructure failures do not create misleading red checks for every stabilization commit.
 
 During the static stabilization sweep, a genuine compile blocker was found and fixed: duplicate `SettingsSearchPanel` partial members in `SettingsSearchPanel.PrivacyHistory.cs` and `SettingsSearchPanel.PrivacyExtras.cs`. The obsolete duplicate partial was removed and the fix is recorded as `R2K-SET-004`.
 
@@ -101,7 +103,7 @@ Append each attempted validation; do not erase failures.
 artifacts\validation\<timestamp>\
 ```
 
-Each attempt gets the static WPF preflight result plus separate SDK/restore/build/test logs and `VALIDATION-SUMMARY.md`. `artifacts/` is git-ignored by default. Successful and failed attempts should be summarized back into this table when they are used as release evidence.
+Each attempt gets the static WPF/source preflight result plus separate SDK/restore/build/test logs and `VALIDATION-SUMMARY.md`. `artifacts/` is git-ignored by default. The summary-generation path is compatible with Windows PowerShell 5.1; successful and failed attempts should be summarized back into this table when they are used as release evidence.
 
 ## Bug/release records
 
