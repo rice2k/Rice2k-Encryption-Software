@@ -20,6 +20,7 @@ public partial class MainWindow
         InitializeSecurityCenterUi();
         InitializeCollisionGuards();
         InitializeAccessibilityUi();
+        InitializeIntegrityLifecycleUi();
         InitializeKeyManagerUi();
         InitializeRecoveryUi();
         InitializeVaultUi();
