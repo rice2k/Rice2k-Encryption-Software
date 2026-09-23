@@ -20,6 +20,12 @@ public partial class MainWindow
     private bool _startupLockChecked;
     private bool _systemEventsSubscribed;
 
+    private sealed record WindowPresentationState(
+        Window Window,
+        double Opacity,
+        bool ShowInTaskbar,
+        WindowState WindowState);
+
     private void InitializeAppLockUi()
     {
         if (_appLockUiInitialized)
@@ -183,7 +189,7 @@ public partial class MainWindow
 
         _appLockActive = true;
         _lastAppInputUtc = DateTimeOffset.UtcNow;
-        var previouslyVisible = new List<Window>();
+        var presentationStates = new List<WindowPresentationState>();
 
         try
         {
@@ -192,35 +198,46 @@ public partial class MainWindow
 
             foreach (Window window in Application.Current.Windows.Cast<Window>().ToArray())
             {
-                if (ReferenceEquals(window, this) || window is AppLockWindow || !window.IsVisible)
+                if (window is AppLockWindow || !window.IsVisible)
                     continue;
-                previouslyVisible.Add(window);
-                window.Hide();
+
+                presentationStates.Add(new WindowPresentationState(
+                    window,
+                    window.Opacity,
+                    window.ShowInTaskbar,
+                    window.WindowState));
+
+                window.Opacity = 0;
+                window.ShowInTaskbar = false;
+                if (window.WindowState == WindowState.Minimized)
+                    window.WindowState = WindowState.Normal;
             }
 
-            Hide();
             var lockWindow = new AppLockWindow(_appLockCredentialService, reason);
             var unlocked = lockWindow.ShowDialog() == true && lockWindow.WasUnlocked;
             if (!unlocked)
                 return;
 
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-
-            foreach (var window in previouslyVisible)
+            foreach (var state in presentationStates)
             {
                 try
                 {
-                    if (!window.IsVisible)
-                        window.Show();
+                    state.Window.Opacity = state.Opacity;
+                    state.Window.ShowInTaskbar = state.ShowInTaskbar;
+                    state.Window.WindowState = state.WindowState == WindowState.Minimized
+                        ? WindowState.Normal
+                        : state.WindowState;
                 }
                 catch
                 {
-                    // A dialog may have been closed by another workflow while Rice2k was locked.
+                    // A window may have closed while Rice2k was locked.
                 }
             }
 
+            ShowInTaskbar = true;
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
             GlobalStatusText.Text = "● Rice2k unlocked   |   Local / offline";
         }
         finally
