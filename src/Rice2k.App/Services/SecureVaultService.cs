@@ -24,6 +24,7 @@ public sealed partial class SecureVaultService
     private const int MaximumSupportedMemLimit = 256 * 1024 * 1024;
     private const int MaximumSupportedChunkSize = 64 * 1024 * 1024;
     private const int MaximumManifestCipherLength = 16 * 1024 * 1024;
+    private const int MaximumManifestPlainLength = MaximumManifestCipherLength - AuthenticationTagSize;
     private const long MaximumRecordPayloadLength = long.MaxValue / 4;
 
     private sealed record VaultManifest(
@@ -322,6 +323,9 @@ public sealed partial class SecureVaultService
             throw new InvalidDataException("The vault header is truncated.");
 
         var vaultId = new Guid(vaultIdBytes);
+        if (vaultId == Guid.Empty)
+            throw new InvalidDataException("The vault header contains an invalid empty vault identifier.");
+
         var manifestCipherLength = reader.ReadInt32();
         if (manifestCipherLength < AuthenticationTagSize || manifestCipherLength > MaximumManifestCipherLength)
             throw new InvalidDataException("The encrypted vault manifest length is invalid.");
@@ -343,6 +347,11 @@ public sealed partial class SecureVaultService
         byte[] manifestNonce,
         byte[] manifestCipher)
     {
+        if (vaultId == Guid.Empty)
+            throw new InvalidDataException("Rice2k cannot write a vault with an empty identifier.");
+        if (manifestCipher.Length < AuthenticationTagSize || manifestCipher.Length > MaximumManifestCipherLength)
+            throw new InvalidDataException("The encrypted vault manifest length is outside the supported format range.");
+
         writer.Write(Magic);
         writer.Write(Version);
         writer.Write(AlgorithmXChaCha20Poly1305);
@@ -377,10 +386,26 @@ public sealed partial class SecureVaultService
 
     private static byte[] EncryptManifest(VaultManifest manifest, byte[] nonce, byte[] key, byte[] headerAuth)
     {
+        if (manifest.VaultId == Guid.Empty)
+            throw new InvalidDataException("Rice2k cannot encrypt a vault manifest with an empty identifier.");
+        if (manifest.Entries is null)
+            throw new InvalidDataException("Rice2k cannot encrypt a vault manifest with a missing entry list.");
+
         var plain = JsonSerializer.SerializeToUtf8Bytes(manifest);
+        byte[]? cipher = null;
         try
         {
-            return SecretAeadXChaCha20Poly1305.Encrypt(plain, nonce, key, headerAuth);
+            if (plain.Length > MaximumManifestPlainLength)
+                throw new InvalidDataException("The vault manifest is too large for the supported Rice2k vault format.");
+
+            cipher = SecretAeadXChaCha20Poly1305.Encrypt(plain, nonce, key, headerAuth);
+            if (cipher.Length > MaximumManifestCipherLength)
+            {
+                CryptographicOperations.ZeroMemory(cipher);
+                cipher = null;
+                throw new InvalidOperationException("Rice2k generated a vault manifest outside its supported format limit.");
+            }
+            return cipher;
         }
         finally
         {
@@ -398,6 +423,9 @@ public sealed partial class SecureVaultService
             if (idBytes.Length != 16)
                 throw new InvalidDataException("A vault entry record is truncated.");
             var entryId = new Guid(idBytes);
+            if (entryId == Guid.Empty)
+                throw new InvalidDataException("The vault contains an entry record with an empty identifier.");
+
             var payloadLength = reader.ReadInt64();
             if (payloadLength < sizeof(long) || payloadLength > MaximumRecordPayloadLength)
                 throw new InvalidDataException("A vault entry record has an invalid payload length.");
@@ -418,12 +446,14 @@ public sealed partial class SecureVaultService
         VaultHeader header,
         IReadOnlyDictionary<Guid, VaultRecordIndex> records)
     {
-        if (manifest.VaultId != header.VaultId)
-            throw new InvalidDataException("The authenticated vault manifest does not match the public vault identifier.");
+        if (manifest.VaultId == Guid.Empty || manifest.VaultId != header.VaultId)
+            throw new InvalidDataException("The authenticated vault manifest does not match a valid public vault identifier.");
         if (manifest.ChunkSize != header.ChunkSize)
             throw new InvalidDataException("The authenticated vault manifest does not match the vault chunk size.");
         if (manifest.Sequence < 0)
             throw new InvalidDataException("The vault manifest contains an invalid sequence number.");
+        if (manifest.Entries is null)
+            throw new InvalidDataException("The vault manifest is missing its entry list.");
 
         var ids = new HashSet<Guid>();
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -458,7 +488,7 @@ public sealed partial class SecureVaultService
         using var reader = new BinaryReader(input, Encoding.UTF8, leaveOpen: true);
 
         var chunkCount = reader.ReadInt64();
-        var expectedChunkCount = entry.Length == 0 ? 0 : (entry.Length + header.ChunkSize - 1) / header.ChunkSize;
+        var expectedChunkCount = ComputeExpectedChunkCount(entry.Length, header.ChunkSize);
         if (chunkCount != expectedChunkCount)
             throw new InvalidDataException("The vault entry contains an inconsistent encrypted chunk count.");
 
@@ -504,6 +534,13 @@ public sealed partial class SecureVaultService
 
         if (input.Position != record.PayloadOffset + record.PayloadLength || written != entry.Length)
             throw new InvalidDataException("The vault entry length does not match its authenticated manifest.");
+    }
+
+    private static long ComputeExpectedChunkCount(long length, int chunkSize)
+    {
+        if (length < 0 || chunkSize <= 0)
+            throw new InvalidDataException("The vault contains invalid chunk parameters.");
+        return length == 0 ? 0 : 1 + ((length - 1) / chunkSize);
     }
 
     private static byte[] DeriveKey(byte[] passwordBytes, byte[] salt, long opsLimit, int memLimit) =>
