@@ -62,6 +62,7 @@ public partial class MainWindow
         var updated = _privacySettings with { PrivacyModeEnabled = !_privacySettings.PrivacyModeEnabled };
         _appSettingsService.TrySave(updated);
         ApplyPrivacySettings(updated);
+        SyncPrivacySettingsPanel(updated);
     }
 
     private void ApplyPrivacySettings(Rice2kAppSettings settings)
@@ -93,6 +94,14 @@ public partial class MainWindow
         }
     }
 
+    private void SyncPrivacySettingsPanel(Rice2kAppSettings settings)
+    {
+        if (SettingsPage.Content is not StackPanel root)
+            return;
+        foreach (var panel in root.Children.OfType<SettingsSearchPanel>())
+            panel.RefreshPrivacySettings(settings);
+    }
+
     private void ClearTransientSensitivePreviews()
     {
         TextInputBox.Clear();
@@ -119,7 +128,7 @@ public partial class MainWindow
 
     private void MainWindow_PrivacyAwareButtonClick(object sender, RoutedEventArgs e)
     {
-        if (e.OriginalSource is not Button button || _privacySettings.ClipboardAutoClearSeconds <= 0)
+        if (e.Source is not Button button || _privacySettings.ClipboardAutoClearSeconds <= 0)
             return;
 
         var label = button.Content?.ToString() ?? string.Empty;
@@ -127,7 +136,7 @@ public partial class MainWindow
         {
             "Copy Output" => TextOutputBox.Text,
             "Copy Checksum" => IntegrityResultBox.Text,
-            "Copy" when button.Parent is Panel && !string.IsNullOrEmpty(GeneratedPasswordBox.Text) => GeneratedPasswordBox.Text,
+            "Copy" when !string.IsNullOrEmpty(GeneratedPasswordBox.Text) => GeneratedPasswordBox.Text,
             _ => null
         };
 
