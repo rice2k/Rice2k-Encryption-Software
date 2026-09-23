@@ -158,7 +158,10 @@ finally {
     $lines.Add('|---|---|---:|---|')
 
     foreach ($result in $results) {
-        $relativeLog = [System.IO.Path]::GetRelativePath($outputDirectory, $result.LogPath)
+        # Validation step logs are written directly beneath the timestamped output
+        # directory. Using only the leaf name keeps this summary compatible with
+        # Windows PowerShell 5.1, whose .NET Framework lacks Path.GetRelativePath.
+        $relativeLog = Split-Path -Leaf $result.LogPath
         $lines.Add("| $($result.Name) | $(if ($result.Passed) { 'PASS' } else { 'FAIL' }) | $($result.ExitCode) | `$relativeLog` |")
     }
 
