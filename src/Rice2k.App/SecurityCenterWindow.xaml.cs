@@ -41,6 +41,10 @@ public partial class SecurityCenterWindow : Window
         ActivityPrivacyText.Text = settings.HideActivityInPrivacyMode
             ? "Activity list is hidden/cleared when Privacy Mode is active"
             : "Activity list remains visible when Privacy Mode is active";
+        HistoryText.Text = BuildHistorySummary(settings);
+        MotionText.Text = settings.ReduceMotion
+            ? "✓ Reduced Motion preference is ON"
+            : "○ Reduced Motion preference is OFF";
 
         var credentialPresent = _appLockService.IsConfigured();
         var appLockEnabled = credentialPresent && settings.AppLockEnabled;
@@ -105,6 +109,21 @@ public partial class SecurityCenterWindow : Window
             triggers.Add($"{settings.AppLockInactivityMinutes}-minute Rice2k inactivity");
 
         return "Enabled triggers: " + string.Join(", ", triggers) + ".";
+    }
+
+    private static string BuildHistorySummary(Rice2kAppSettings settings)
+    {
+        if (!settings.RememberRecentFiles && !settings.PersistentActivityLogEnabled)
+            return "✓ Optional disk history is OFF";
+
+        var pieces = new List<string>();
+        if (settings.RememberRecentFiles)
+            pieces.Add("recent-file paths ON");
+        if (settings.PersistentActivityLogEnabled)
+            pieces.Add("redacted activity ON");
+        if (settings.ClearDiskHistoryWhenPrivacyModeStarts)
+            pieces.Add("Privacy Mode purge ON");
+        return "⚠ Optional disk history: " + string.Join(", ", pieces);
     }
 
     private static string FormatClipboardDuration(int seconds) => seconds switch
