@@ -81,6 +81,8 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - `R2KENC03` one/multi-recipient file encryption using sealed-box content-key wrapping and XChaCha20-Poly1305 file contents.
 - Detached `.r2ksig` Ed25519 signatures with SHA-512 file-match verification and optional trusted `.r2kpub` comparison.
 - Source-controlled identity, recipient-encryption, signature, and contact-store regression tests.
+- Source-controlled recipient-metadata regression tests for fingerprint/public-key consistency, fingerprint length, duplicate recipient IDs, and rejection cleanup.
+- Source-controlled signature finalization regression coverage for bounded output and pre-cancelled cleanup.
 - **Privacy Mode** quick toggle with optional session-activity hiding and transient-preview clearing.
 - Configurable protected clipboard auto-clear: Never / 15 / 30 / 60 / 120 seconds plus Clear Clipboard Now.
 - App-wide clipboard generation and exact-value checks so older Rice2k timers do not intentionally erase newer clipboard content.
@@ -117,6 +119,8 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - App Lock requests caused by manual lock, minimize, Windows session lock, or inactivity are deferred while the credential is being changed/removed and re-evaluated against the final saved state.
 - Protect Folder captures its password once before asynchronous scanning, clears the visible password controls before the scan, and does not re-read secret UI state after an `await`.
 - Recipient Encryption preserves close intent during active work and makes recipient-card import/container inspection cancellation-aware.
+- Recipient encryption validates caller-supplied public identities by recomputing fingerprints from their public keys, bounds fingerprint/metadata size, and rejects duplicate recipient IDs as well as duplicate fingerprints before output creation.
+- Detached-signature writing now enforces the same document limits as verification, serializes to bounded UTF-8 output, flushes temporary output before finalization, and preserves no-overwrite/cancellation cleanup behavior.
 - Public Contacts and Secure Vault preserve close intent while asynchronous cleanup completes.
 - Privacy Mode reports clipboard/stored-history cleanup failure instead of silently implying cleanup succeeded.
 - Manual **Clear Clipboard Now** invalidates older Rice2k auto-clear timers through the protected clipboard generation model.
@@ -156,6 +160,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Batch encryption performs preflight checks per item and preserves completed outputs if later items fail or are cancelled.
 - `.r2kenc` parsers cap unauthenticated KDF, chunk-size, metadata-length, fingerprint, and recipient/resource values before expensive work.
 - Authenticated metadata is validated for internal consistency before decryption continues.
+- `R2KENC03` creation validates recipient fingerprint/public-key consistency, duplicate IDs/fingerprints, and writer-side authenticated-metadata size before content encryption/finalization.
 - v2 key-file containers bind the required key fingerprint into authenticated metadata/header associated data.
 - The public v2 fingerprint is treated only as a selection hint until authenticated metadata is successfully opened.
 - Password + key-file encryption fails closed unless both the password-derived key and matching key-file secret are present.
@@ -163,6 +168,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - `.r2kkey`, `.r2krecovery`, and `.r2kid` package parsers bound KDF/ciphertext parameters before expensive work; package creators now enforce matching output-size limits before KDF/finalization.
 - Key/recovery/private-identity packages authenticate encrypted payloads and security-relevant header parameters.
 - Public identity cards and private identity packages enforce one display-name contract across creation/export/import.
+- `.r2ksig` generation enforces verifier-compatible signer/fingerprint/filename/document-size bounds and flushes its temporary file before finalization.
 - Raw symmetric/private key bytes are not displayed in the normal user interface.
 - In-memory managed/private keys are cleared on a best-effort basis when removed or their manager closes.
 - Recovery tests clear temporary recovered key material after fingerprint verification.
@@ -187,4 +193,4 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Lock-screen activation is deferred during credential mutation so the lock dialog never intentionally authenticates against a credential mid-transition.
 - App Lock is explicitly scoped as a same-application privacy barrier, not protection against an attacker already controlling the Windows account or local Rice2k files.
 - Security Center does not display passwords, private keys, plaintext, or recovery secrets and does not convert configuration state into a claim of completed release validation.
-- Security tests cover round trips, wrong passwords/keys/recipients, tampering, truncation, resource-limit rejection, overwrite protection, cancellation cleanup, vault recovery/fault injection, identities, signatures, contacts, App Lock credential behavior, application-settings persistence edge cases, and package-format output limits.
+- Security tests cover round trips, wrong passwords/keys/recipients, tampering, truncation, resource-limit rejection, overwrite protection, cancellation cleanup, vault recovery/fault injection, identities, signatures, contacts, App Lock credential behavior, application-settings persistence edge cases, recipient-metadata validation, and package-format output limits.
