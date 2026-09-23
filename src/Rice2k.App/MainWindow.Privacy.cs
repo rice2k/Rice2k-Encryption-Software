@@ -134,12 +134,27 @@ public partial class MainWindow
     {
         TextInputBox.Clear();
         TextOutputBox.Clear();
-        TextPasswordBox.Clear();
         GeneratedPasswordBox.Clear();
-        EncryptPasswordBox.Clear();
-        EncryptConfirmPasswordBox.Clear();
-        DecryptPasswordBox.Clear();
         ActivityList.Items.Clear();
+
+        // Newer Rice2k features add password fields in partial classes and child
+        // windows. Clear every live PasswordBox instead of maintaining a fragile
+        // hand-written list so App Lock / Privacy Mode cannot miss newly-added
+        // key-package, identity, recovery, vault, or other transient passwords.
+        foreach (Window window in Application.Current.Windows.Cast<Window>().ToArray())
+        {
+            try
+            {
+                foreach (var passwordBox in FindVisualChildren<PasswordBox>(window).ToArray())
+                    passwordBox.Clear();
+            }
+            catch
+            {
+                // A child window may be opening/closing while the scrub runs. Keep
+                // clearing the remaining Rice2k windows rather than aborting all cleanup.
+            }
+        }
+
         return _mainProtectedClipboard.ClearNow();
     }
 
