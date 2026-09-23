@@ -2,7 +2,7 @@
 
 **Rice2k Encryption Software** is a modern, user-friendly Windows encryption application designed to make strong data protection understandable and practical for everyday users while still providing advanced security tools for experienced users.
 
-> **Project status:** early development / security-focused preview. Current application version: **0.5.0-preview.1**. Do not use a pre-1.0 build as the only copy of irreplaceable data, recovery material, or private keys.
+> **Project status:** early development / security-focused preview. Current application version: **0.6.0-preview.1**. Do not use a pre-1.0 build as the only copy of irreplaceable data, recovery material, or private keys.
 
 ## Current development features
 
@@ -54,7 +54,7 @@
 
 A recovery package is not a password bypass. Losing the recovery password means Rice2k cannot decrypt that recovery package.
 
-## Secure Vault — v0.4/v0.5 foundation
+## Secure Vault — v0.4+ foundation
 
 Rice2k includes an operational `.r2kvault` Secure Vault:
 
@@ -78,7 +78,7 @@ Locked vault sessions clear the in-memory content key and decrypted entry list. 
 
 ## Identities, recipient encryption, and digital signatures — v0.5
 
-Rice2k now includes a public/private identity system for secure sharing.
+Rice2k includes a public/private identity system for secure sharing.
 
 ### Rice2k identities
 
@@ -119,6 +119,23 @@ Rice2k `.r2ksig` signatures use Ed25519 plus SHA-512 file hashing:
 
 Use recipient encryption when you need confidentiality. Use signatures when you need authenticity/integrity. Use both when you need both properties.
 
+## Privacy controls — v0.6 preview
+
+The first v0.6 privacy layer is operational:
+
+- **Privacy Mode** quick toggle in the main navigation;
+- persisted Privacy Mode preference in the non-secret local settings file;
+- optional hiding/clearing of the in-memory Activity list while Privacy Mode is enabled;
+- optional clearing of transient text, password, and generated-password previews when Privacy Mode turns on;
+- configurable clipboard auto-clear: **Never, 15, 30, 60, or 120 seconds**;
+- **Clear Clipboard Now** action;
+- app-wide clipboard ownership generation so a newer Rice2k copy supersedes older Rice2k timers;
+- exact-value checking before automatic clearing, so Rice2k does not intentionally erase a newer clipboard value copied afterward;
+- protected clipboard behavior for main text/password/checksum copies and identity/contact/recipient fingerprints;
+- clear Local / offline status messaging.
+
+Privacy Mode is an interface/privacy feature, not an encryption mode. Authenticated main-application locking on minimize/Windows session lock is still a v0.6 work item and is not claimed as implemented yet.
+
 ## Security/regression testing foundation
 
 The source-controlled xUnit suite covers, among other areas:
@@ -131,11 +148,11 @@ The source-controlled xUnit suite covers, among other areas:
 - private/public identity package validation and tamper rejection;
 - recipient and multi-recipient encryption/decryption;
 - detached signature creation, verification, and tamper detection;
-- public identity contact-card validation.
+- public identity contact-store import/load/remove/tamper behavior.
 
 `tools/Rice2k.VaultBench` provides a repeatable local benchmark/correctness harness for larger vault workloads.
 
-> **Validation limitation:** the current working environment does not contain the .NET SDK, and GitHub-hosted Actions jobs have not been assigned a runner during attempted validation. The newer tests are committed and source-reviewed but are **not claimed as executed** here.
+> **Validation limitation:** the current working environment does not contain the .NET SDK, and GitHub-hosted Actions jobs have not been assigned a runner during attempted validation. The newer tests and v0.6 UI changes are committed and source-reviewed but are **not claimed as compiled or executed** here.
 
 ## File formats
 
@@ -143,13 +160,13 @@ The source-controlled xUnit suite covers, among other areas:
 |---|---|---|
 | `.r2kenc` / `R2KENC01` | Password-protected encrypted file | Development implementation |
 | `.r2kenc` / `R2KENC02` | Password + key-file encrypted file | Development implementation |
-| `.r2kenc` / `R2KENC03` | One/multi-recipient encrypted file | **v0.5 development implementation** |
+| `.r2kenc` / `R2KENC03` | One/multi-recipient encrypted file | v0.5 development implementation |
 | `.r2kkey` | Password-protected symmetric key package | Development implementation |
 | `.r2krecovery` | Separately password-protected recovery package | Development implementation |
 | `.r2kvault` | Persistent encrypted vault / protected-folder container | Development implementation |
-| `.r2kid` | Password-protected private Rice2k identity | **v0.5 development implementation** |
-| `.r2kpub` | Shareable self-signed public identity card | **v0.5 development implementation** |
-| `.r2ksig` / `R2KSIG1` | Detached Ed25519 signature document | **v0.5 development implementation** |
+| `.r2kid` | Password-protected private Rice2k identity | v0.5 development implementation |
+| `.r2kpub` | Shareable self-signed public identity card | v0.5 development implementation |
+| `.r2ksig` / `R2KSIG1` | Detached Ed25519 signature document | v0.5 development implementation |
 
 Formats may change before 1.0.
 
@@ -190,7 +207,8 @@ Major release gates still include:
 
 - execute the full test suite on the supported Windows/.NET 10 toolchain;
 - large-vault and multi-gigabyte benchmark runs;
-- broader Privacy Mode, application auto-lock, and clipboard auto-clear;
+- authenticated application locking on minimize / Windows session lock and main-app inactivity lock;
+- complete Privacy Mode / accessibility acceptance testing;
 - Advanced Mode and compatibility controls;
 - AES-256-GCM interoperability mode;
 - broader fuzzing/concurrency tests;
