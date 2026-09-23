@@ -141,6 +141,45 @@ foreach ($entry in $classLifecycle.GetEnumerator()) {
     }
 }
 
+# Ordinary methods can collide across partial files just as lifecycle overrides
+# can. This lightweight source check intentionally compares method name plus a
+# whitespace-normalized parameter declaration. It catches the common Rice2k
+# failure mode where a helper/event handler is copied into a second partial file,
+# while preserving legitimate overloads whose parameter declarations differ.
+# It is not a replacement for the C# compiler; it is an early fail-fast guard.
+$methodPattern = '(?ms)^\s*(?:public|private|protected|internal)\s+(?:(?:static|async|override|virtual|sealed|new|unsafe)\s+)*[A-Za-z_][A-Za-z0-9_<>,\.\?\[\]]*\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\((?<params>.*?)\)\s*(?:where\s+[^\{=>]+\s*)?(?:\{|=>)'
+$classMethods = @{}
+
+foreach ($csFile in $csFiles) {
+    $source = Get-Content -Raw -Path $csFile.FullName
+    $classMatch = [regex]::Match($source, '\bpartial\s+class\s+(?<class>[A-Za-z_][A-Za-z0-9_]*)')
+    if (-not $classMatch.Success) {
+        continue
+    }
+
+    $className = $classMatch.Groups['class'].Value
+    foreach ($methodMatch in [regex]::Matches($source, $methodPattern)) {
+        $methodName = $methodMatch.Groups['name'].Value
+        if ($lifecycleNames -contains $methodName) {
+            continue
+        }
+
+        $parameters = ($methodMatch.Groups['params'].Value -replace '\s+', ' ').Trim()
+        $signature = "$className::$methodName($parameters)"
+        if (-not $classMethods.ContainsKey($signature)) {
+            $classMethods[$signature] = [System.Collections.Generic.List[string]]::new()
+        }
+        $classMethods[$signature].Add($csFile.Name)
+    }
+}
+
+foreach ($entry in $classMethods.GetEnumerator()) {
+    $checks++
+    if ($entry.Value.Count -gt 1) {
+        $failures.Add("Duplicate partial-class method signature $($entry.Key) found in: $($entry.Value -join ', ').")
+    }
+}
+
 Write-Host "Rice2k static WPF preflight: $checks check(s) across $($xamlFiles.Count) XAML file(s)."
 
 if ($failures.Count -gt 0) {
@@ -151,5 +190,5 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 
-Write-Host 'STATIC PREFLIGHT PASSED: project namespace isolation, XAML handlers, and lifecycle overrides look consistent.' -ForegroundColor Green
+Write-Host 'STATIC PREFLIGHT PASSED: project namespace isolation, XAML handlers, lifecycle overrides, and partial-class method signatures look consistent.' -ForegroundColor Green
 exit 0
