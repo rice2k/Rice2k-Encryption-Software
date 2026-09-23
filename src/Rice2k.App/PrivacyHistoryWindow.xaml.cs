@@ -45,18 +45,20 @@ public partial class PrivacyHistoryWindow : Window
 
     private void ClearRecent_Click(object sender, RoutedEventArgs e)
     {
-        StatusText.Text = _historyService.TryClearRecentFiles()
-            ? "✓ Recent-file history cleared."
-            : "Rice2k could not clear recent-file history.";
+        var cleared = _historyService.TryClearRecentFiles();
         RefreshHistory();
+        StatusText.Text = cleared
+            ? "✓ Recent-file history cleared."
+            : "⚠ Rice2k could not clear recent-file history. The existing file may still be present.";
     }
 
     private void ClearActivity_Click(object sender, RoutedEventArgs e)
     {
-        StatusText.Text = _historyService.TryClearActivity()
-            ? "✓ Persistent redacted activity cleared."
-            : "Rice2k could not clear persistent activity.";
+        var cleared = _historyService.TryClearActivity();
         RefreshHistory();
+        StatusText.Text = cleared
+            ? "✓ Persistent redacted activity cleared."
+            : "⚠ Rice2k could not clear persistent activity. The existing file may still be present.";
     }
 
     private void ClearAll_Click(object sender, RoutedEventArgs e)
@@ -70,10 +72,11 @@ public partial class PrivacyHistoryWindow : Window
         if (result != MessageBoxResult.Yes)
             return;
 
-        StatusText.Text = _historyService.TryClearAll()
-            ? "✓ All optional stored history cleared."
-            : "Rice2k could not clear one or more stored-history files.";
+        var cleared = _historyService.TryClearAll();
         RefreshHistory();
+        StatusText.Text = cleared
+            ? "✓ All optional stored history cleared."
+            : "⚠ Rice2k could not clear one or more stored-history files. Review the counts above and try again.";
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
