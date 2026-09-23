@@ -6,6 +6,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rice2k.App", "src\Rice2k.Ap
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rice2k.Tests", "tests\Rice2k.Tests\Rice2k.Tests.csproj", "{7BD8F6C9-A64F-4DB6-A6C7-8E4A1256DB91}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rice2k.VaultBench", "tools\Rice2k.VaultBench\Rice2k.VaultBench.csproj", "{AB8D4A6C-BE1C-4DB9-A7F6-671C4F31E947}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,5 +22,9 @@ Global
 		{7BD8F6C9-A64F-4DB6-A6C7-8E4A1256DB91}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7BD8F6C9-A64F-4DB6-A6C7-8E4A1256DB91}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7BD8F6C9-A64F-4DB6-A6C7-8E4A1256DB91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB8D4A6C-BE1C-4DB9-A7F6-671C4F31E947}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB8D4A6C-BE1C-4DB9-A7F6-671C4F31E947}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB8D4A6C-BE1C-4DB9-A7F6-671C4F31E947}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB8D4A6C-BE1C-4DB9-A7F6-671C4F31E947}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
