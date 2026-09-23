@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Rice2k.Encryption.Services;
 
@@ -117,6 +118,28 @@ public sealed class FileEncryptionServiceTests
         await Assert.ThrowsAsync<InvalidDataException>(() =>
             _service.DecryptFileAsync(encrypted, restored, Password));
 
+        Assert.False(File.Exists(restored));
+    }
+
+    [Fact]
+    public async Task Decrypt_ExcessiveKdfCostInHeader_IsRejectedBeforeKeyDerivation()
+    {
+        using var temp = new TempDirectory();
+        var source = temp.PathFor("resource-limit.bin");
+        var encrypted = temp.PathFor("resource-limit.bin.r2kenc");
+        var restored = temp.PathFor("resource-limit.restored.bin");
+        await File.WriteAllTextAsync(source, "resource limit test");
+        await _service.EncryptFileAsync(source, encrypted, Password, verifyAfterEncrypt: false);
+
+        var bytes = await File.ReadAllBytesAsync(encrypted);
+        const int operationsLimitOffset = 8 + 1 + 1 + 1;
+        BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(operationsLimitOffset, sizeof(long)), 999);
+        await File.WriteAllBytesAsync(encrypted, bytes);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            _service.DecryptFileAsync(encrypted, restored, Password));
+
+        Assert.Contains("operation limit", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(File.Exists(restored));
     }
 
