@@ -114,7 +114,7 @@ public sealed class FileEncryptionServiceTests
         await using (var stream = new FileStream(encrypted, FileMode.Open, FileAccess.Write, FileShare.None))
             stream.SetLength(Math.Max(0, stream.Length - 7));
 
-        await Assert.ThrowsAnyAsync<Exception>(() =>
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
             _service.DecryptFileAsync(encrypted, restored, Password));
 
         Assert.False(File.Exists(restored));
