@@ -31,10 +31,13 @@ public partial class MainWindow
             settingsRoot.Children.Add(new SettingsSearchPanel(
                 _appSettingsService,
                 this,
-                ApplyHelpfulHints));
+                ApplyHelpfulHints,
+                ApplyPrivacySettings));
         }
 
-        ApplyHelpfulHints(_appSettingsService.Load().ShowHelpfulHints);
+        var settings = _appSettingsService.Load();
+        ApplyHelpfulHints(settings.ShowHelpfulHints);
+        ApplyPrivacySettings(settings);
     }
 
     private static TextBlock CreateHintText(string text) => new()
