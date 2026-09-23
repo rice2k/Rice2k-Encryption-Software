@@ -16,6 +16,7 @@ public sealed record Rice2kPublicIdentity(
 
 public sealed class Rice2kIdentity : IDisposable
 {
+    private const int MaximumNameCharacters = 200;
     private byte[]? _encryptionPrivateKey;
     private byte[]? _signingPrivateKey;
 
@@ -28,13 +29,19 @@ public sealed class Rice2kIdentity : IDisposable
         byte[] signingPublicKey,
         byte[] signingPrivateKey)
     {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Rice2k identities require a non-empty identifier.", nameof(id));
         if (encryptionPublicKey.Length != 32 || encryptionPrivateKey.Length != 32)
             throw new ArgumentException("Rice2k encryption identities require a 32-byte public/private key pair.");
         if (signingPublicKey.Length != 32 || signingPrivateKey.Length != 64)
             throw new ArgumentException("Rice2k signing identities require a 32-byte public key and 64-byte private key.");
 
+        var normalizedName = string.IsNullOrWhiteSpace(name) ? "Unnamed Identity" : name.Trim();
+        if (normalizedName.Length > MaximumNameCharacters)
+            throw new ArgumentException($"Rice2k identity names must be {MaximumNameCharacters} characters or fewer.", nameof(name));
+
         Id = id;
-        Name = string.IsNullOrWhiteSpace(name) ? "Unnamed Identity" : name.Trim();
+        Name = normalizedName;
         CreatedUtc = createdUtc;
         EncryptionPublicKey = encryptionPublicKey.ToArray();
         SigningPublicKey = signingPublicKey.ToArray();
