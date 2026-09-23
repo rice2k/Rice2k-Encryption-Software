@@ -142,13 +142,13 @@ The v0.6 privacy layer now includes:
 - optional hiding/clearing of the in-memory Activity list while Privacy Mode is enabled;
 - optional clearing of transient text, password, and generated-password previews when Privacy Mode turns on;
 - configurable clipboard auto-clear: **Never, 15, 30, 60, or 120 seconds**;
-- **Clear Clipboard Now** action;
+- **Clear Clipboard Now** action that also invalidates older Rice2k auto-clear timers;
 - app-wide clipboard ownership generation so a newer Rice2k copy supersedes older Rice2k timers;
 - exact-value checking before automatic clearing, so Rice2k does not intentionally erase a newer clipboard value copied afterward;
-- protected clipboard behavior for main text/password/checksum copies and identity/contact/recipient fingerprints;
+- protected clipboard behavior for main text/password/checksum copies, copied technical-error details, and identity/contact/recipient fingerprints;
 - optional recent-file history, **off by default**, with bounded local storage, deduplication, review, and clearing;
 - optional persistent activity history, **off by default**, which stores only action names and timestamps after redaction;
-- Privacy Mode can clear optional recent-file and persistent activity history when enabled;
+- Privacy Mode can clear optional recent-file and persistent activity history when enabled and reports cleanup failure instead of silently implying a purge succeeded;
 - optional generic Windows completion notifications for encryption/decryption; notification text never includes filenames, paths, passwords, keys, or plaintext and is suppressed while Privacy Mode is on;
 - authenticated **App Lock** using an Argon2id-derived verifier stored separately from the password;
 - 12-character minimum App Lock password;
@@ -200,7 +200,7 @@ The source-controlled xUnit suite covers, among other areas:
 
 `tools/Rice2k.VaultBench` provides a repeatable local benchmark/correctness harness for larger vault workloads.
 
-> **Validation limitation:** the current working environment does not contain the .NET SDK. GitHub Actions validation attempts now trigger automatically, but the observed hosted jobs still terminate before a runner is assigned (`runner_id: 0`, zero executed steps). These runs do not establish either compilation success or source-code failure. The current source remains **unvalidated as a complete Windows build**.
+> **Validation limitation:** a supported Windows/.NET 10 Release build and the full security/regression test suite have not yet completed successfully for the current source. The GitHub Actions validation workflow is manual (`workflow_dispatch`). Prior hosted validation attempts terminated before a runner was assigned (`runner_id: 0`, zero executed steps), which establishes neither compilation success nor source-code failure. Treat the current source as **unvalidated as a complete Windows build** until the build and test gates execute and pass.
 
 ## File formats
 
@@ -242,7 +242,7 @@ The recommended Windows stabilization command is:
 PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1
 ```
 
-It records the SDK environment, restore/build/test output, exit codes and a Markdown report under the git-ignored `artifacts\validation\` folder.
+It records the SDK environment, restore/build/test output, exit codes and a Markdown report under the git-ignored `artifacts\validation\` folder. The validation script is kept compatible with Windows PowerShell 5.1 as well as newer PowerShell editions.
 
 Manual commands are documented in [docs/BUILDING.md](docs/BUILDING.md).
 
