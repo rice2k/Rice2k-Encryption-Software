@@ -10,9 +10,15 @@ public partial class RecoveryCenterWindow : Window
 {
     private readonly KeyManagerService _keyManager = new();
     private readonly RecoveryPackageService _recovery = new();
+    private readonly AppSettingsService _settingsService;
 
-    public RecoveryCenterWindow()
+    public RecoveryCenterWindow() : this(new AppSettingsService())
     {
+    }
+
+    public RecoveryCenterWindow(AppSettingsService settingsService)
+    {
+        _settingsService = settingsService;
         InitializeComponent();
     }
 
@@ -133,6 +139,7 @@ public partial class RecoveryCenterWindow : Window
             RecoveryFingerprintBox.Text = recovered.Fingerprint;
             RecoveryTestStatusText.Text = $"✓ Recovery test passed for '{recovered.Name}'. The package authenticated and contains a valid 256-bit key.";
             RecoveryStatusText.Text = "✓ Test passed. Compare this fingerprint with the original key's fingerprint when available.";
+            RecordSuccessfulRecoveryTest(recovered);
         }
         catch (Exception ex)
         {
@@ -182,6 +189,7 @@ public partial class RecoveryCenterWindow : Window
             RecoveryFingerprintBox.Text = recovered.Fingerprint;
             RecoveryTestStatusText.Text = $"✓ Restored a new .r2kkey package for '{recovered.Name}'.";
             RecoveryStatusText.Text = $"✓ Restore complete. Fingerprint: {recovered.Fingerprint}";
+            RecordSuccessfulRecoveryTest(recovered);
         }
         catch (Exception ex)
         {
@@ -193,6 +201,17 @@ public partial class RecoveryCenterWindow : Window
             recovered?.Dispose();
             TestRecoveryPasswordBox.Clear();
         }
+    }
+
+    private void RecordSuccessfulRecoveryTest(ManagedKey recovered)
+    {
+        var current = _settingsService.Load();
+        _settingsService.TrySave(current with
+        {
+            LastRecoveryTestUtc = DateTimeOffset.UtcNow,
+            LastRecoveryFingerprint = recovered.Fingerprint,
+            LastRecoveryKeyName = recovered.Name
+        });
     }
 
     private bool ValidateRecoveryTestInputs()
