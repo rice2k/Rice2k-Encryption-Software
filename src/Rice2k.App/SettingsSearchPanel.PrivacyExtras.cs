@@ -25,6 +25,7 @@ public partial class SettingsSearchPanel
         Loaded -= SettingsSearchPanel_PrivacyExtrasLoaded;
         EnsureDesktopNotificationControl();
         InitializeClipboardClearHardening();
+        InitializeTourReplayHardening();
 
         _loading = true;
         try
@@ -59,6 +60,29 @@ public partial class SettingsSearchPanel
         PersistentActivityCheck.Unchecked += OptionalHistoryPreference_Changed;
         ClearDiskHistoryCheck.Checked += OptionalHistoryPreference_Changed;
         ClearDiskHistoryCheck.Unchecked += OptionalHistoryPreference_Changed;
+    }
+
+    private void InitializeTourReplayHardening()
+    {
+        var replayButton = FindSettingsLogicalChildren<Button>(this)
+            .FirstOrDefault(button => string.Equals(button.Content?.ToString(), "Replay welcome tour", StringComparison.Ordinal));
+        if (replayButton is null)
+            return;
+
+        replayButton.Click -= ReplayTour_Click;
+        replayButton.Click += ReplayTourAccurate_Click;
+    }
+
+    private void ReplayTourAccurate_Click(object sender, RoutedEventArgs e)
+    {
+        var tour = new WelcomeTourWindow(_settingsService)
+        {
+            Owner = _owner
+        };
+
+        PreferenceStatusText.Text = tour.ShowDialog() == true
+            ? "Welcome tour completed."
+            : "Welcome tour closed before completion; the saved completion state was not changed by this replay.";
     }
 
     private void EnsureDesktopNotificationControl()
