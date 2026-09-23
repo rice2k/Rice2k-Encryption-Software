@@ -47,6 +47,8 @@ public sealed class OperationPreflightService
             throw new IOException("Rice2k cannot open the selected source file for reading. The file may be locked by another program.", ex);
         }
 
+        ProbeDestinationWriteAccess(destinationDirectory);
+
         long? availableBytes = null;
         try
         {
@@ -84,7 +86,54 @@ public sealed class OperationPreflightService
             sourceInfo.Length,
             destinationDirectory,
             availableBytes,
-            $"Preflight passed — source readable, destination available, {freeSpaceText}.");
+            $"Preflight passed — source readable, destination writable, output name available, {freeSpaceText}.");
+    }
+
+    private static void ProbeDestinationWriteAccess(string destinationDirectory)
+    {
+        var probePath = Path.Combine(
+            destinationDirectory,
+            $".rice2k-write-test-{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            using (var stream = new FileStream(
+                       probePath,
+                       FileMode.CreateNew,
+                       FileAccess.Write,
+                       FileShare.None,
+                       bufferSize: 1,
+                       FileOptions.WriteThrough))
+            {
+                stream.WriteByte(0x52);
+                stream.Flush(flushToDisk: true);
+            }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new UnauthorizedAccessException(
+                "Rice2k cannot write to the selected output folder. Choose another folder or adjust its permissions before starting.",
+                ex);
+        }
+        catch (IOException ex)
+        {
+            throw new IOException(
+                "Rice2k could not create a temporary safety-check file in the selected output folder. The folder may be read-only, unavailable, or locked.",
+                ex);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(probePath))
+                    File.Delete(probePath);
+            }
+            catch
+            {
+                // The probe is intentionally tiny and uniquely named. Failure to remove it is
+                // non-fatal to preflight but should be extremely uncommon.
+            }
+        }
     }
 
     private static string FormatBytes(long bytes)
