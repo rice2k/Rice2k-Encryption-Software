@@ -1,0 +1,116 @@
+<Window x:Class="Rice2k.Encryption.DigitalSignatureWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rice2k Digital Signatures"
+        Width="960" Height="740"
+        MinWidth="820" MinHeight="620"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="24">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Digital Signatures" FontSize="30" FontWeight="SemiBold" />
+            <TextBlock Text="Sign a file with an Ed25519 Rice2k identity or verify exactly what a detached .r2ksig says about a file. A signer name is only a label until its fingerprint is independently trusted."
+                       Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+        </StackPanel>
+
+        <TabControl Grid.Row="1">
+            <TabItem Header="Sign file">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="File" FontSize="18" FontWeight="SemiBold" />
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SignSourceBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Browse…" Click="BrowseSignSource_Click" Margin="10,0,0,0" />
+                                </Grid>
+                                <TextBlock Text="Signature output" Margin="0,12,0,4" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SignatureOutputBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Choose location…" Click="BrowseSignatureOutput_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Signing identity" FontSize="18" FontWeight="SemiBold" />
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SigningIdentityBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Choose .r2kid…" Click="BrowseSigningIdentity_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                                </Grid>
+                                <Label Content="Identity package password" Margin="0,12,0,0" />
+                                <PasswordBox x:Name="SigningIdentityPasswordBox" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock x:Name="SignStatusText" Text="Ready" FontWeight="SemiBold" />
+                                <TextBlock x:Name="SignDetailText" Text="Rice2k signs a domain-separated SHA-512 file digest plus signer/key metadata; the source file is never modified."
+                                           Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="✍ Sign File" Click="SignFile_Click" HorizontalAlignment="Right" MinWidth="150" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Verify signature">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="File and detached signature" FontSize="18" FontWeight="SemiBold" />
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="VerifySourceBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Choose file…" Click="BrowseVerifySource_Click" Margin="10,0,0,0" />
+                                </Grid>
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="VerifySignatureBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Choose .r2ksig…" Click="BrowseVerifySignature_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Optional trusted identity comparison" FontSize="18" FontWeight="SemiBold" />
+                                <TextBlock Text="Without a trusted .r2kpub, Rice2k can prove that the signature matches its embedded signing key and that the file bytes match—but it cannot independently prove who owns that key."
+                                           Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,5,0,10" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="ExpectedPublicIdentityBox" IsReadOnly="True" />
+                                    <Button Grid.Column="1" Content="Choose .r2kpub…" Click="BrowseExpectedIdentity_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                                    <Button Grid.Column="2" Content="Clear" Click="ClearExpectedIdentity_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="8,0,0,0" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock x:Name="VerifyStatusText" Text="Not verified yet" FontSize="20" FontWeight="SemiBold" />
+                                <TextBlock x:Name="VerifyDetailText" Text="Choose a file and .r2ksig to verify." Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                <Separator Margin="0,14" Background="{StaticResource BorderBrush}" />
+                                <TextBlock Text="Signer label" Foreground="{StaticResource MutedTextBrush}" />
+                                <TextBlock x:Name="SignerNameText" Text="—" FontWeight="SemiBold" Margin="0,3,0,8" />
+                                <TextBlock Text="Signer fingerprint" Foreground="{StaticResource MutedTextBrush}" />
+                                <TextBlock x:Name="SignerFingerprintText" Text="—" FontFamily="Cascadia Mono, Consolas" TextWrapping="Wrap" Margin="0,3,0,8" />
+                                <TextBlock Text="Signed filename / current filename" Foreground="{StaticResource MutedTextBrush}" />
+                                <TextBlock x:Name="VerifiedFileNameText" Text="—" TextWrapping="Wrap" Margin="0,3,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="✓ Verify Signature" Click="VerifySignature_Click" HorizontalAlignment="Right" MinWidth="165" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
