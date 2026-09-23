@@ -10,7 +10,7 @@
     <AssemblyName>Rice2kEncryption</AssemblyName>
     <RootNamespace>Rice2k.Encryption</RootNamespace>
     <ApplicationIcon Condition="Exists('Assets\\Rice2k.ico')">Assets\Rice2k.ico</ApplicationIcon>
-    <Version>0.6.0-preview.1</Version>
+    <Version>0.6.0-preview.2</Version>
     <Authors>Christopher Schumacher / Rice2k</Authors>
     <Product>Rice2k Encryption Software</Product>
     <Description>Modern, user-friendly Windows encryption software.</Description>
@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <PackageReference Include="Sodium.Core" Version="1.4.1" />
+    <PackageReference Include="Microsoft.Win32.SystemEvents" Version="10.0.0" />
   </ItemGroup>
 
 </Project>
