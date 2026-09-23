@@ -4,15 +4,29 @@ namespace Rice2k.Encryption.Services;
 
 public sealed class PublicIdentityContactStore
 {
-    private readonly IdentityService _identityService = new();
+    private readonly IdentityService _identityService;
     private readonly string _contactsDirectory;
 
     public PublicIdentityContactStore()
+        : this(
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Rice2k Encryption Software",
+                "Public Identity Contacts"),
+            new IdentityService())
     {
-        _contactsDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Rice2k Encryption Software",
-            "Public Identity Contacts");
+    }
+
+    public PublicIdentityContactStore(string contactsDirectory)
+        : this(contactsDirectory, new IdentityService())
+    {
+    }
+
+    internal PublicIdentityContactStore(string contactsDirectory, IdentityService identityService)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(contactsDirectory);
+        _contactsDirectory = Path.GetFullPath(contactsDirectory);
+        _identityService = identityService ?? throw new ArgumentNullException(nameof(identityService));
     }
 
     public async Task<Rice2kPublicIdentity> ImportAsync(
