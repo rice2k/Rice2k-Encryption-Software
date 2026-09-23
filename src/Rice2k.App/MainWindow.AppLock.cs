@@ -190,17 +190,50 @@ public partial class MainWindow
         _appLockActive = true;
         _lastAppInputUtc = DateTimeOffset.UtcNow;
         var presentationStates = new List<WindowPresentationState>();
+        var unlocked = false;
 
         try
         {
             ClearTransientSensitivePreviews();
             _appLockClipboard.ClearNow();
+            BlankRice2kWindows(presentationStates);
 
-            foreach (Window window in Application.Current.Windows.Cast<Window>().ToArray())
+            var lockWindow = new AppLockWindow(_appLockCredentialService, reason);
+            unlocked = lockWindow.ShowDialog() == true && lockWindow.WasUnlocked;
+        }
+        finally
+        {
+            RestoreRice2kWindows(presentationStates);
+            _appLockActive = false;
+            _lastAppInputUtc = DateTimeOffset.UtcNow;
+        }
+
+        if (!unlocked || Application.Current.Dispatcher.HasShutdownStarted)
+            return;
+
+        try
+        {
+            ShowInTaskbar = true;
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+            GlobalStatusText.Text = "● Rice2k unlocked   |   Local / offline";
+        }
+        catch
+        {
+            // Restoration is best effort; an application shutdown may already be underway.
+        }
+    }
+
+    private static void BlankRice2kWindows(List<WindowPresentationState> presentationStates)
+    {
+        foreach (Window window in Application.Current.Windows.Cast<Window>().ToArray())
+        {
+            if (window is AppLockWindow || !window.IsVisible)
+                continue;
+
+            try
             {
-                if (window is AppLockWindow || !window.IsVisible)
-                    continue;
-
                 presentationStates.Add(new WindowPresentationState(
                     window,
                     window.Opacity,
@@ -212,38 +245,29 @@ public partial class MainWindow
                 if (window.WindowState == WindowState.Minimized)
                     window.WindowState = WindowState.Normal;
             }
-
-            var lockWindow = new AppLockWindow(_appLockCredentialService, reason);
-            var unlocked = lockWindow.ShowDialog() == true && lockWindow.WasUnlocked;
-            if (!unlocked)
-                return;
-
-            foreach (var state in presentationStates)
+            catch
             {
-                try
-                {
-                    state.Window.Opacity = state.Opacity;
-                    state.Window.ShowInTaskbar = state.ShowInTaskbar;
-                    state.Window.WindowState = state.WindowState == WindowState.Minimized
-                        ? WindowState.Normal
-                        : state.WindowState;
-                }
-                catch
-                {
-                    // A window may have closed while Rice2k was locked.
-                }
+                // One unusual/closing child window must not prevent the rest of Rice2k from locking.
             }
-
-            ShowInTaskbar = true;
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-            GlobalStatusText.Text = "● Rice2k unlocked   |   Local / offline";
         }
-        finally
+    }
+
+    private static void RestoreRice2kWindows(IEnumerable<WindowPresentationState> presentationStates)
+    {
+        foreach (var state in presentationStates.Reverse())
         {
-            _appLockActive = false;
-            _lastAppInputUtc = DateTimeOffset.UtcNow;
+            try
+            {
+                state.Window.Opacity = state.Opacity;
+                state.Window.ShowInTaskbar = state.ShowInTaskbar;
+                state.Window.WindowState = state.WindowState == WindowState.Minimized
+                    ? WindowState.Normal
+                    : state.WindowState;
+            }
+            catch
+            {
+                // A window may have closed while Rice2k was locked. Continue restoring the others.
+            }
         }
     }
 
