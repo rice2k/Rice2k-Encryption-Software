@@ -19,9 +19,11 @@ public sealed class RecipientFileEncryptionService
     private const int ContentKeySize = 32;
     private const int AuthenticationTagSize = 16;
     private const int MaximumRecipients = 64;
+    private const int MaximumRecipientFingerprintLength = 100;
     private const int MaximumWrappedKeyLength = 256;
     private const int MaximumSupportedChunkSize = 64 * 1024 * 1024;
     private const int MaximumMetadataCipherLength = 128 * 1024;
+    private const int MaximumMetadataPlainLength = MaximumMetadataCipherLength - AuthenticationTagSize;
 
     private sealed record RecipientMetadata(Guid Id, string Fingerprint);
 
@@ -95,17 +97,27 @@ public sealed class RecipientFileEncryptionService
                 DateTimeOffset.UtcNow,
                 recipientList.Select(recipient => new RecipientMetadata(recipient.Id, recipient.Fingerprint)).ToArray());
 
-            var metadataNonce = SecretAeadXChaCha20Poly1305.GenerateNonce();
             var metadataPlain = JsonSerializer.SerializeToUtf8Bytes(metadata);
             byte[]? metadataCipher = null;
 
             try
             {
+                if (metadataPlain.Length > MaximumMetadataPlainLength)
+                {
+                    throw new InvalidDataException(
+                        "The recipient metadata is too large for the Rice2k R2KENC03 format. Reduce the recipient set or metadata size.");
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+                var metadataNonce = SecretAeadXChaCha20Poly1305.GenerateNonce();
                 metadataCipher = SecretAeadXChaCha20Poly1305.Encrypt(
                     metadataPlain,
                     metadataNonce,
                     contentKey,
                     headerAuth);
+
+                if (metadataCipher.Length > MaximumMetadataCipherLength)
+                    throw new InvalidDataException("Rice2k generated recipient metadata that exceeds the supported R2KENC03 format limit.");
 
                 await using (var input = new FileStream(
                     sourcePath,
@@ -590,8 +602,15 @@ public sealed class RecipientFileEncryptionService
             throw new InvalidDataException("Recipient-encrypted metadata does not match the authenticated recipient count.");
         if (metadata.Recipients.Count < 1 || metadata.Recipients.Count > MaximumRecipients)
             throw new InvalidDataException("Recipient-encrypted metadata contains an invalid recipient list.");
-        if (metadata.Recipients.Any(recipient => recipient.Id == Guid.Empty || string.IsNullOrWhiteSpace(recipient.Fingerprint)))
+        if (metadata.Recipients.Any(recipient =>
+                recipient.Id == Guid.Empty ||
+                string.IsNullOrWhiteSpace(recipient.Fingerprint) ||
+                recipient.Fingerprint.Length > MaximumRecipientFingerprintLength))
+        {
             throw new InvalidDataException("Recipient-encrypted metadata contains an invalid recipient identity.");
+        }
+        if (metadata.Recipients.Select(recipient => recipient.Id).Distinct().Count() != metadata.Recipients.Count)
+            throw new InvalidDataException("Recipient-encrypted metadata contains duplicate recipient identifiers.");
         if (metadata.Recipients.Select(recipient => recipient.Fingerprint).Distinct(StringComparer.Ordinal).Count() != metadata.Recipients.Count)
             throw new InvalidDataException("Recipient-encrypted metadata contains duplicate recipient fingerprints.");
 
@@ -608,8 +627,23 @@ public sealed class RecipientFileEncryptionService
             throw new ArgumentException($"Choose between 1 and {MaximumRecipients} recipients.");
         if (recipients.Any(recipient => recipient is null))
             throw new ArgumentException("The recipient list contains an invalid identity.");
-        if (recipients.Any(recipient => recipient.Id == Guid.Empty || recipient.EncryptionPublicKey.Length != 32 || recipient.SigningPublicKey.Length != 32))
-            throw new ArgumentException("One or more recipient identities contain invalid public keys.");
+
+        foreach (var recipient in recipients)
+        {
+            if (recipient.Id == Guid.Empty || recipient.EncryptionPublicKey.Length != 32 || recipient.SigningPublicKey.Length != 32)
+                throw new ArgumentException("One or more recipient identities contain invalid public keys.");
+            if (string.IsNullOrWhiteSpace(recipient.Fingerprint) || recipient.Fingerprint.Length > MaximumRecipientFingerprintLength)
+                throw new ArgumentException("One or more recipient identities contain an invalid fingerprint.");
+
+            var expectedFingerprint = Rice2kIdentity.CreateFingerprint(
+                recipient.EncryptionPublicKey,
+                recipient.SigningPublicKey);
+            if (!string.Equals(recipient.Fingerprint, expectedFingerprint, StringComparison.Ordinal))
+                throw new ArgumentException("One or more recipient fingerprints do not match their supplied public keys.");
+        }
+
+        if (recipients.Select(recipient => recipient.Id).Distinct().Count() != recipients.Count)
+            throw new ArgumentException("The same recipient identifier was selected more than once.");
         if (recipients.Select(recipient => recipient.Fingerprint).Distinct(StringComparer.Ordinal).Count() != recipients.Count)
             throw new ArgumentException("The same recipient identity was selected more than once.");
     }
