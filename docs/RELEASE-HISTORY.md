@@ -16,7 +16,7 @@ This file is the permanent version ledger for Rice2k Encryption Software. Every 
 | 0.6.0-preview.1 | Development preview | Privacy Mode, protected clipboard foundation and privacy settings | Source-reviewed; full supported Windows build/test gate not completed |
 | 0.6.0-preview.2 | Development preview | Authenticated App Lock, startup/minimize/session/inactivity locking, accessibility foundations | Source-reviewed; full supported Windows build/test gate not completed |
 | 0.6.0-preview.3 | Development preview | App Lock hardening, Security Center, additional keyboard/high-contrast work | Source-reviewed; GitHub validation attempts still executed zero workflow steps |
-| 0.6.0-preview.4 | Current development preview | Optional recent-file history, redacted persistent activity, reduced-motion wiring, live High Contrast adaptation, generic privacy-safe Windows notifications | **Stabilization/build validation in progress. Not yet production-ready.** |
+| 0.6.0-preview.4 | Current development preview | Feature stabilization: optional recent-file/redacted activity history, reduced-motion/live High Contrast behavior, privacy-safe notifications, lifecycle/cancellation hardening across secret-owning windows, safe main-window exit/integrity handling, clipboard/privacy cleanup reporting, WPF/partial-class static preflight, and fail-closed local validation tooling | **Stabilization/build validation in progress. Supported Windows Release build and full test gates have not passed yet. Not production-ready.** |
 
 ## Release status definitions
 
