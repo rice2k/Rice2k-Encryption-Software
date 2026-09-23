@@ -29,6 +29,17 @@ public sealed class IdentityServiceTests
     }
 
     [Fact]
+    public void Generate_OversizedDisplayName_IsRejected()
+    {
+        var service = new IdentityService();
+
+        var error = Assert.Throws<InvalidDataException>(() =>
+            service.Generate(new string('A', 201)));
+
+        Assert.Contains("200", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task PrivateIdentity_WrongPassword_FailsClosed()
     {
         using var temp = new TempDirectory();
