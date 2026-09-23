@@ -27,6 +27,25 @@ public sealed class AppLockCredentialServiceTests
     }
 
     [Fact]
+    public void SetPassword_ReplacesExistingCredentialAndCleansTemporaryFile()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.PathFor("app-lock.json");
+        var service = new AppLockCredentialService(path);
+        const string firstPassword = "first sufficiently long app lock password";
+        const string secondPassword = "second sufficiently long app lock password";
+
+        service.SetPassword(firstPassword);
+        service.SetPassword(secondPassword);
+
+        Assert.True(service.IsConfigured());
+        Assert.True(service.Verify(secondPassword));
+        Assert.False(service.Verify(firstPassword));
+        Assert.Single(Directory.GetFiles(temp.DirectoryPath, "app-lock.json"));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "app-lock.json.*.tmp"));
+    }
+
+    [Fact]
     public void SetPassword_RejectsShortPassword()
     {
         using var temp = new TempDirectory();
