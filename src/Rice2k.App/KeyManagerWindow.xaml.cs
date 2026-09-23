@@ -11,6 +11,9 @@ public partial class KeyManagerWindow : Window
 {
     private readonly ObservableCollection<ManagedKey> _keys = [];
     private readonly KeyManagerService _keyManager = new();
+    private CancellationTokenSource? _operationCts;
+    private bool _busy;
+    private bool _closeWhenFinished;
 
     public KeyManagerWindow()
     {
@@ -22,6 +25,9 @@ public partial class KeyManagerWindow : Window
 
     private void GenerateKey_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         var name = string.IsNullOrWhiteSpace(KeyNameBox.Text)
             ? $"Rice2k Key {_keys.Count + 1}"
             : KeyNameBox.Text.Trim();
@@ -36,6 +42,9 @@ public partial class KeyManagerWindow : Window
 
     private async void ExportKey_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         if (KeysGrid.SelectedItem is not ManagedKey key)
         {
             ShowError("Select a key to export first.");
@@ -67,14 +76,23 @@ public partial class KeyManagerWindow : Window
         };
 
         if (dialog.ShowDialog(this) != true)
+        {
+            PackagePasswordBox.Clear();
+            PackageConfirmPasswordBox.Clear();
+            password = string.Empty;
+            confirmation = string.Empty;
             return;
+        }
 
+        BeginOperation("Encrypting key package…");
         try
         {
-            ExportKeyButton.IsEnabled = false;
-            KeyManagerStatusText.Text = "Encrypting key package…";
-            await _keyManager.ExportAsync(key, dialog.FileName, password);
+            await _keyManager.ExportAsync(key, dialog.FileName, password, _operationCts!.Token);
             KeyManagerStatusText.Text = $"✓ Exported encrypted key package. Fingerprint: {key.Fingerprint}";
+        }
+        catch (OperationCanceledException)
+        {
+            KeyManagerStatusText.Text = "Key export cancelled safely. Incomplete temporary package output was removed where possible.";
         }
         catch (Exception ex)
         {
@@ -83,14 +101,19 @@ public partial class KeyManagerWindow : Window
         }
         finally
         {
+            password = string.Empty;
+            confirmation = string.Empty;
             PackagePasswordBox.Clear();
             PackageConfirmPasswordBox.Clear();
-            ExportKeyButton.IsEnabled = KeysGrid.SelectedItem is ManagedKey;
+            EndOperation();
         }
     }
 
     private async void ImportKey_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         var password = PackagePasswordBox.Password;
         if (string.IsNullOrWhiteSpace(password))
         {
@@ -107,16 +130,24 @@ public partial class KeyManagerWindow : Window
         };
 
         if (dialog.ShowDialog(this) != true)
+        {
+            PackagePasswordBox.Clear();
+            PackageConfirmPasswordBox.Clear();
+            password = string.Empty;
             return;
+        }
 
+        BeginOperation("Authenticating encrypted key package…");
+        ManagedKey? imported = null;
         try
         {
-            KeyManagerStatusText.Text = "Authenticating encrypted key package…";
-            var imported = await _keyManager.ImportAsync(dialog.FileName, password);
+            imported = await _keyManager.ImportAsync(dialog.FileName, password, _operationCts!.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
 
             if (_keys.Any(existing => existing.Id == imported.Id || string.Equals(existing.Fingerprint, imported.Fingerprint, StringComparison.Ordinal)))
             {
                 imported.Dispose();
+                imported = null;
                 KeyManagerStatusText.Text = "That key is already loaded in this session.";
                 return;
             }
@@ -125,23 +156,35 @@ public partial class KeyManagerWindow : Window
             KeysGrid.SelectedItem = imported;
             KeysGrid.ScrollIntoView(imported);
             KeyManagerStatusText.Text = $"✓ Imported and authenticated {imported.Name}. Fingerprint: {imported.Fingerprint}";
+            imported = null; // ownership transferred to _keys
             UpdateCount();
+        }
+        catch (OperationCanceledException)
+        {
+            imported?.Dispose();
+            imported = null;
+            KeyManagerStatusText.Text = "Key import cancelled safely. No new key was retained.";
         }
         catch (Exception ex)
         {
+            imported?.Dispose();
+            imported = null;
             ShowError(ex.Message);
             KeyManagerStatusText.Text = "⚠ Key import failed safely. No key was added.";
         }
         finally
         {
+            imported?.Dispose();
+            password = string.Empty;
             PackagePasswordBox.Clear();
             PackageConfirmPasswordBox.Clear();
+            EndOperation();
         }
     }
 
     private void RemoveKey_Click(object sender, RoutedEventArgs e)
     {
-        if (KeysGrid.SelectedItem is not ManagedKey key)
+        if (_busy || KeysGrid.SelectedItem is not ManagedKey key)
             return;
 
         var result = MessageBox.Show(
@@ -168,8 +211,8 @@ public partial class KeyManagerWindow : Window
             SelectedKeyNameText.Text = key.Name;
             SelectedKeyTypeText.Text = $"{key.KeyType} • {key.Source} • created {key.CreatedDisplay}";
             SelectedFingerprintBox.Text = key.Fingerprint;
-            ExportKeyButton.IsEnabled = true;
-            RemoveKeyButton.IsEnabled = true;
+            ExportKeyButton.IsEnabled = !_busy;
+            RemoveKeyButton.IsEnabled = !_busy;
         }
         else
         {
@@ -186,11 +229,52 @@ public partial class KeyManagerWindow : Window
         RemoveKeyButton.IsEnabled = false;
     }
 
+    private void BeginOperation(string status)
+    {
+        _operationCts?.Dispose();
+        _operationCts = new CancellationTokenSource();
+        _busy = true;
+        ExportKeyButton.IsEnabled = false;
+        RemoveKeyButton.IsEnabled = false;
+        KeysGrid.IsEnabled = false;
+        KeyNameBox.IsEnabled = false;
+        KeyManagerStatusText.Text = status;
+    }
+
+    private void EndOperation()
+    {
+        _busy = false;
+        KeysGrid.IsEnabled = true;
+        KeyNameBox.IsEnabled = true;
+        ExportKeyButton.IsEnabled = KeysGrid.SelectedItem is ManagedKey;
+        RemoveKeyButton.IsEnabled = KeysGrid.SelectedItem is ManagedKey;
+        _operationCts?.Dispose();
+        _operationCts = null;
+
+        if (_closeWhenFinished)
+        {
+            _closeWhenFinished = false;
+            Dispatcher.InvokeAsync(Close);
+        }
+    }
+
     private void UpdateCount() =>
         KeyCountText.Text = $"Session keys — {_keys.Count}";
 
     private void KeyManagerWindow_Closing(object? sender, CancelEventArgs e)
     {
+        PackagePasswordBox.Clear();
+        PackageConfirmPasswordBox.Clear();
+
+        if (_busy)
+        {
+            e.Cancel = true;
+            _closeWhenFinished = true;
+            KeyManagerStatusText.Text = "Cancelling the active key operation before closing…";
+            _operationCts?.Cancel();
+            return;
+        }
+
         foreach (var key in _keys)
             key.Dispose();
         _keys.Clear();
