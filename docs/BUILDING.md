@@ -19,6 +19,22 @@ git clone https://github.com/rice2k/Rice2k-Encryption-Software.git
 cd Rice2k-Encryption-Software
 ```
 
+## Fast WPF source preflight
+
+Before restore/build, the repository can scan common WPF wiring problems:
+
+```powershell
+PowerShell -ExecutionPolicy Bypass -File .\tools\Static-WpfPreflight.ps1
+```
+
+The preflight checks:
+
+- XAML event-handler names that have no code-behind implementation;
+- XAML event handlers accidentally implemented more than once across partial-class files;
+- duplicate WPF lifecycle overrides such as `OnInitialized`, `OnContentRendered`, `OnSourceInitialized`, or `OnDrop` across the same partial class.
+
+This is an early-warning check only. It does **not** replace the .NET compiler or the security/regression suite.
+
 ## Recommended stabilization validation
 
 For Beta/readiness work, run the repository validator from PowerShell:
@@ -29,6 +45,7 @@ PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1
 
 It records:
 
+- static WPF preflight output;
 - `dotnet --info`;
 - complete solution restore output;
 - Release build output;
@@ -94,9 +111,11 @@ The project is under active development. Keep independent backups of important f
 
 ## CI status
 
-`.github/workflows/build.yml` now validates pushes and pull requests to `main` and also supports manual dispatch. It requests `windows-latest`, installs the SDK from `global.json`, restores the complete solution, builds Release, runs the security/regression project, and uploads TRX results.
+`.github/workflows/build.yml` is currently **manual-dispatch only** while hosted-runner access is unavailable. When dispatched, it requests `windows-latest`, runs the static WPF preflight, installs the SDK from `global.json`, restores the complete solution, builds Release, runs the security/regression project, and uploads TRX results.
 
-As of the current stabilization attempt, GitHub creates the validation check but does not assign a hosted runner: observed jobs report `runner_id: 0`, an empty runner name/group, zero executed steps, and no job log. This is tracked as `R2K-CI-001` in `docs/KNOWN-ISSUES.md` and is **not** being treated as a compiler/test failure.
+During stabilization, a temporary two-platform probe requested both `ubuntu-latest` and `windows-latest`. Both jobs were created but failed before any step ran and returned no logs. Earlier Windows jobs also reported `runner_id: 0`, empty runner name/group, and zero executed steps. This is tracked as `R2K-CI-001` in `docs/KNOWN-ISSUES.md` and is **not** being treated as a compiler/test failure.
+
+Automatic push/PR validation is intentionally paused until hosted-runner access is restored so infrastructure failures do not create misleading red checks for every stabilization commit.
 
 See also:
 
