@@ -30,7 +30,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Safe batch cancellation that keeps completed outputs and cleans the active temporary file.
 - Pause/resume support for single-file and batch encryption/decryption at safe chunk boundaries while keeping cancellation responsive.
 - Five-page first-run welcome tour explaining workflows, source-file safety, passwords, batches, progress, and pre-1.0 limitations.
-- Non-sensitive LocalApplicationData preference storage for onboarding, helpful hints, and recovery-health status.
+- Non-sensitive LocalApplicationData preference storage for onboarding, helpful hints, recovery-health status, and vault auto-lock preferences.
 - Searchable Settings panel with guidance, safety, privacy, and interface-mode sections.
 - Persisted Show Helpful Hints preference and contextual Encrypt/Decrypt tips.
 - Replay Welcome Tour action in Settings.
@@ -55,21 +55,32 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Vault create, unlock, explicit lock, full verification, and extraction workflows.
 - Vault Browser with add files, add folder, search, extract, rename, remove, verify, and lock actions.
 - Recursive folder intake preserving relative paths while skipping inaccessible and reparse/junction folders.
-- 10-minute inactivity auto-lock option in the Vault Browser.
+- Configurable persisted vault inactivity auto-lock choices: 1, 5, 10, 15, or 30 minutes.
 - Authenticated vault sequence numbers used to reject stale/concurrent mutation finalization.
 - Atomic vault mutation pipeline: verify current → build pending → verify pending → replace with backup → verify final.
 - Preserved `<vault>.backup` recovery copy during the final atomic replace step.
 - Recovery-backup controls to verify, restore, or move a valid backup aside.
 - Recovery restore preserves the newer active vault as a separate pre-recovery backup rather than deleting it.
+- Detailed Vault Browser progress showing stage, percent, bytes, processing rate, elapsed time, ETA, and current item where measurable.
+- **Cancel safely** support for progress-aware vault add, extract, rename, remove, and verification operations.
+- Vault lock/close lifecycle guards so active operations cannot race unlocked-session disposal.
+- Primary Vault Browser accessibility names and help text.
+- Internal test-only vault mutation checkpoints after pending verification, active replacement, and final verification.
+- Deterministic vault fault-injection regression tests around atomic replacement/recovery behavior.
+- Vault progress/cancellation regression tests including cancellation during a multi-chunk write.
+- Vault parser safety tests covering unsupported versions, hostile Argon2 parameters, oversized chunks/manifests/records, and truncated headers.
+- **One-click Protect Folder** workflow on the main Vault page.
+- Protect Folder planning that rejects self-inclusion, checks available destination space, preserves relative paths, skips inaccessible/reparse content, reports detailed progress, and uses the standard `.r2kvault` format.
+- Protect Folder regression tests for nested paths, source preservation, existing destinations, self-inclusion, empty folders, and cancellation cleanup.
+- `Rice2k.VaultBench` local benchmark/correctness harness for configurable vault add, verification, extraction, throughput, and SHA-256 restore validation.
+- `docs/VAULT-BENCHMARKING.md` with repeatable benchmark instructions and multi-gigabyte/many-file release-gate workload matrix.
 - Development format documentation for `.r2kenc`, `.r2kkey`, `.r2krecovery`, and `.r2kvault`.
 - xUnit v3 security/regression test project included in the solution.
-- Key/recovery tests covering package round trips, wrong passwords, tampering, recovery validation, and restored fingerprint preservation.
-- Password + key-file tests covering round trips, wrong-key rejection, wrong-password rejection, tampering, cancellation cleanup, fingerprint inspection, and v1 compatibility detection.
-- Vault tests covering create/unlock, add/extract, rename/remove, wrong-password rejection, tamper detection, duplicate paths, overwrite prevention, backup verification, backup restoration, and safe backup preservation.
 
 ### Changed
 
-- Windows application development version advanced to `0.4.0-preview.1`.
+- Windows application development version advanced to `0.4.0-preview.2`.
+- Main status bar now reads the assembly informational version instead of relying on a hard-coded old development label.
 - Encrypt/Decrypt screens hide cryptographic details behind recommended defaults instead of exposing them as required choices.
 - Encrypt offers **Password only** and **Password + Rice2k key file** without changing existing password-only files.
 - Decrypt automatically distinguishes password-only `R2KENC01` containers from password + key-file `R2KENC02` containers.
@@ -77,7 +88,10 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Dropping multiple normal files or a folder onto the main window routes them to the Batch Queue.
 - Passwords & Keys exposes the operational Key Manager instead of only the password generator.
 - Recovery Center exposes package creation, testing, and restore workflows instead of a placeholder card.
-- Secure Vault now opens an operational Vault Browser instead of a placeholder card.
+- Secure Vault exposes operational **Protect Folder** and **Open Secure Vault** entry points instead of a placeholder card.
+- Vault auto-lock now uses persisted user-selectable timing while older settings files safely fall back to enabled / 10 minutes.
+- `docs/ROADMAP.md` was brought in sync with features already implemented in source and now separates implemented functionality from unexecuted release gates.
+- `docs/R2KVAULT-FORMAT.md` now documents detailed progress, cancellation semantics, recovery controls, configurable auto-lock, and fault-injection coverage.
 - GitHub validation workflow builds and runs the security test project when manually dispatched and a hosted runner is available.
 
 ### Security
@@ -107,4 +121,9 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Vault mutations fully authenticate the current state before rewriting and fully authenticate pending/final states before releasing recovery data.
 - A pre-existing vault recovery backup blocks later mutation so possible recovery data is not silently overwritten.
 - Recovery-backup restore authenticates the candidate first and preserves the current active vault as a separate recovery artifact.
-- Security tests cover round trips, wrong passwords, wrong keys, tampering, truncation, resource-limit rejection, overwrite protection, password policy, cancellation cleanup, key packages, key-file containers, recovery packages, and vault lifecycle/recovery behavior.
+- Safe vault cancellation before active replacement discards incomplete pending output and leaves the active vault preferred; cancellation/failure after replacement uses the retained recovery path.
+- Manual vault locking is blocked while an operation is active; close requests request safe cancellation before session disposal when possible.
+- Protect Folder rejects placing its output inside the source folder to prevent recursive self-inclusion and never deletes source-folder data.
+- A cancelled/failed Protect Folder operation removes only its own newly-created empty output when no authenticated folder data or recovery backup exists.
+- Vault parser tests explicitly exercise resource limits before expensive KDF/allocation behavior.
+- Security tests cover round trips, wrong passwords, wrong keys, tampering, truncation, resource-limit rejection, overwrite protection, password policy, cancellation cleanup, key packages, key-file containers, recovery packages, vault lifecycle/recovery behavior, fault-injection checkpoints, and folder protection.
