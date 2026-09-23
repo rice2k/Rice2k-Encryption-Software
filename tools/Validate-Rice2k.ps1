@@ -9,6 +9,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $solution = Join-Path $repoRoot 'Rice2kEncryption.sln'
 $testProject = Join-Path $repoRoot 'tests\Rice2k.Tests\Rice2k.Tests.csproj'
 $projectFile = Join-Path $repoRoot 'src\Rice2k.App\Rice2k.App.csproj'
+$staticPreflightScript = Join-Path $PSScriptRoot 'Static-WpfPreflight.ps1'
 $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $outputDirectory = Join-Path $repoRoot "artifacts\validation\$timestamp"
 $testResultsDirectory = Join-Path $outputDirectory 'TestResults'
@@ -39,16 +40,27 @@ function Invoke-DotNetStep {
     }
 }
 
+function Invoke-StaticPreflight {
+    $logPath = Join-Path $outputDirectory '01-static-wpf-preflight.log'
+    Write-Host "`n=== Static WPF preflight ===" -ForegroundColor Cyan
+
+    & $staticPreflightScript 2>&1 | Tee-Object -FilePath $logPath
+    $exitCode = $LASTEXITCODE
+
+    return [pscustomobject]@{
+        Name = 'Static WPF preflight'
+        ExitCode = $exitCode
+        Passed = ($exitCode -eq 0)
+        LogPath = $logPath
+    }
+}
+
 $results = [System.Collections.Generic.List[object]]::new()
 $started = Get-Date
 $commit = 'unknown'
 $version = 'unknown'
 
 try {
-    if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-        throw 'The .NET SDK was not found. Install the supported .NET 10 SDK and run this script again.'
-    }
-
     if (Get-Command git -ErrorAction SilentlyContinue) {
         try {
             $commit = (& git -C $repoRoot rev-parse HEAD 2>$null).Trim()
@@ -71,11 +83,23 @@ try {
         }
     }
 
-    $sdkInfo = Invoke-DotNetStep -Name 'Record .NET SDK environment' -Arguments @('--info') -LogName '01-dotnet-info.log'
+    if (-not (Test-Path $staticPreflightScript)) {
+        throw "Static WPF preflight script was not found: $staticPreflightScript"
+    }
+
+    $staticPreflight = Invoke-StaticPreflight
+    $results.Add($staticPreflight)
+    if (-not $staticPreflight.Passed) { throw 'Static WPF preflight failed.' }
+
+    if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+        throw 'The .NET SDK was not found. Install the supported .NET 10 SDK and run this script again.'
+    }
+
+    $sdkInfo = Invoke-DotNetStep -Name 'Record .NET SDK environment' -Arguments @('--info') -LogName '02-dotnet-info.log'
     $results.Add($sdkInfo)
     if (-not $sdkInfo.Passed) { throw '.NET SDK environment check failed.' }
 
-    $restore = Invoke-DotNetStep -Name 'Restore complete solution' -Arguments @('restore', $solution) -LogName '02-restore.log'
+    $restore = Invoke-DotNetStep -Name 'Restore complete solution' -Arguments @('restore', $solution) -LogName '03-restore.log'
     $results.Add($restore)
     if (-not $restore.Passed) { throw 'Solution restore failed.' }
 
@@ -84,7 +108,7 @@ try {
         '--configuration', 'Release',
         '--no-restore',
         '-p:ContinuousIntegrationBuild=true'
-    ) -LogName '03-build.log'
+    ) -LogName '04-build.log'
     $results.Add($build)
     if (-not $build.Passed) { throw 'Release build failed.' }
 
@@ -95,7 +119,7 @@ try {
             '--no-build',
             '--results-directory', $testResultsDirectory,
             '--logger', 'trx;LogFileName=rice2k-tests.trx'
-        ) -LogName '04-tests.log'
+        ) -LogName '05-tests.log'
         $results.Add($test)
         if (-not $test.Passed) { throw 'Security/regression tests failed.' }
     }
