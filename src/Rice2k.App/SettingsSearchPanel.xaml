@@ -1,0 +1,54 @@
+<UserControl x:Class="Rice2k.Encryption.SettingsSearchPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <Border Style="{StaticResource CardStyle}">
+            <StackPanel>
+                <TextBlock Text="Find a setting" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="Search by words such as hints, tour, simple, verify, privacy, or advanced." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,10" />
+                <TextBox x:Name="SettingsSearchBox" TextChanged="SettingsSearchBox_TextChanged" ToolTip="Search Rice2k settings" />
+                <TextBlock x:Name="SearchStatusText" Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,6,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="ExperienceCard" Style="{StaticResource CardStyle}" Tag="hints helpful guidance tour welcome onboarding beginner simple interface">
+            <StackPanel>
+                <TextBlock Text="Guidance &amp; interface" FontSize="18" FontWeight="SemiBold" />
+                <CheckBox x:Name="HelpfulHintsCheck"
+                          Content="Show helpful hints and contextual tips"
+                          Checked="HelpfulHints_Changed"
+                          Unchecked="HelpfulHints_Changed"
+                          Foreground="{StaticResource TextBrush}"
+                          Margin="0,12,0,5" />
+                <TextBlock Text="Hints explain what actions do without exposing unnecessary cryptographic terminology." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
+                <Button Content="Replay welcome tour" Click="ReplayTour_Click" Width="170" HorizontalAlignment="Left" Style="{StaticResource SecondaryButtonStyle}" Margin="0,12,0,0" />
+                <TextBlock x:Name="PreferenceStatusText" Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,6,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="ModeCard" Style="{StaticResource CardStyle}" Tag="simple advanced interface mode cryptography technical settings">
+            <StackPanel>
+                <TextBlock Text="Interface mode" FontSize="18" FontWeight="SemiBold" />
+                <RadioButton Content="Simple — recommended for most users" IsChecked="True" Foreground="{StaticResource TextBrush}" Margin="0,12,0,5" />
+                <RadioButton Content="Advanced — cryptographic and format controls (planned)" IsEnabled="False" Foreground="{StaticResource MutedTextBrush}" />
+                <TextBlock Text="Simple Mode keeps recommended security selected automatically. Advanced Mode will not be enabled until its controls and compatibility rules are fully tested." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="SafetyCard" Style="{StaticResource CardStyle}" Tag="verify verification source overwrite keep both safety original cancel pause progress">
+            <StackPanel>
+                <TextBlock Text="File safety" FontSize="18" FontWeight="SemiBold" />
+                <CheckBox Content="Verify encrypted files before finalizing (recommended default)" IsChecked="True" IsEnabled="False" Foreground="{StaticResource TextBrush}" Margin="0,12,0,5" />
+                <TextBlock Text="Rice2k keeps source files, refuses automatic overwrites, uses temporary outputs, and verifies encrypted files by default. These safety defaults are intentionally not weakened by Simple Mode." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="PrivacyCard" Style="{StaticResource CardStyle}" Tag="privacy clipboard lock auto lock history filenames recent files local offline planned">
+            <StackPanel>
+                <TextBlock Text="Privacy controls" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="Privacy Mode, clipboard auto-clear, recent-file controls, and automatic locking are planned for the privacy milestone." Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                <TextBlock Text="Current development behavior: activity history is session-only and does not record passwords, plaintext, or secret keys." Foreground="{StaticResource SuccessBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
