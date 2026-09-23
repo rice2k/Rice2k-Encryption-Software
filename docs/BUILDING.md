@@ -24,6 +24,33 @@ dotnet restore Rice2kEncryption.sln
 dotnet build Rice2kEncryption.sln --configuration Release
 ```
 
+## Run security tests
+
+The solution includes `tests/Rice2k.Tests`, an xUnit v3 test project targeting the same Windows/.NET generation as the application.
+
+Run all tests:
+
+```powershell
+dotnet test .\tests\Rice2k.Tests\Rice2k.Tests.csproj --configuration Release
+```
+
+Current automated coverage includes:
+
+- encrypted-text round trips;
+- fresh salt/nonce behavior;
+- wrong-password failure;
+- text-token tamper and malformed-field rejection;
+- empty, normal, and multi-chunk file round trips;
+- source preservation;
+- file wrong-password failure;
+- ciphertext tamper detection;
+- truncated-container rejection;
+- destination overwrite prevention;
+- service-level password validation;
+- cancelled-operation temporary-file cleanup.
+
+Security-sensitive changes should add or update tests rather than relying only on manual UI testing.
+
 ## Run from source
 
 ```powershell
@@ -34,13 +61,19 @@ dotnet run --project .\src\Rice2k.App\Rice2k.App.csproj
 
 1. Open `Rice2kEncryption.sln`.
 2. Allow NuGet packages to restore.
-3. Set `Rice2k.App` as the startup project if it is not already selected.
-4. Build the solution.
-5. Run with **F5** or **Ctrl+F5**.
+3. Build the solution.
+4. Use **Test Explorer** to run `Rice2k.Tests`.
+5. Set `Rice2k.App` as the startup project.
+6. Run the application with **F5** or **Ctrl+F5**.
 
-## Current external package
+## Current external packages
 
-The development build uses `Sodium.Core` to access libsodium-compatible cryptographic primitives.
+The development build uses:
+
+- `Sodium.Core` for libsodium-compatible cryptographic primitives;
+- `xunit.v3` for automated security/regression tests;
+- `xunit.runner.visualstudio` for Visual Studio/VSTest integration;
+- `Microsoft.NET.Test.Sdk` for test discovery/execution tooling.
 
 ## Important pre-1.0 warning
 
@@ -48,4 +81,6 @@ The project is under active development. Keep independent backups of important f
 
 ## CI note
 
-A manual GitHub Actions build workflow is included at `.github/workflows/build.yml`. At initial project setup, GitHub-hosted runners were not being assigned to this repository, so automatic push-triggered builds were disabled to avoid misleading failed checks with zero executed steps. Once hosted runners are available, the workflow can be manually dispatched and later re-enabled for pushes and pull requests.
+A manual GitHub Actions validation workflow is included at `.github/workflows/build.yml`. It restores the solution, builds a Release configuration, executes the security test project on Windows, and uploads TRX test results when a hosted runner is available.
+
+At initial project setup, GitHub-hosted runners were terminating before any runner was assigned (`runner_id: 0`, zero executed steps), so automatic push-triggered builds remain disabled to avoid presenting infrastructure failures as source-code failures. The workflow can be manually dispatched once GitHub provides a hosted runner for the repository.
