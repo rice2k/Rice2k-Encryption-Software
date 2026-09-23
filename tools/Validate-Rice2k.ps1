@@ -59,6 +59,8 @@ $results = [System.Collections.Generic.List[object]]::new()
 $started = Get-Date
 $commit = 'unknown'
 $version = 'unknown'
+$validationFailed = $false
+$failureMessage = $null
 
 try {
     if (Get-Command git -ErrorAction SilentlyContinue) {
@@ -125,11 +127,16 @@ try {
     }
 }
 catch {
-    Write-Host "`nVALIDATION FAILED: $($_.Exception.Message)" -ForegroundColor Red
+    $validationFailed = $true
+    $failureMessage = $_.Exception.Message
+    Write-Host "`nVALIDATION FAILED: $failureMessage" -ForegroundColor Red
 }
 finally {
     $finished = Get-Date
-    $overallPassed = $results.Count -gt 0 -and ($results | Where-Object { -not $_.Passed }).Count -eq 0
+    $overallPassed = -not $validationFailed -and
+        $results.Count -gt 0 -and
+        ($results | Where-Object { -not $_.Passed }).Count -eq 0
+
     if (-not $SkipTests -and ($results | Where-Object Name -eq 'Run security/regression tests').Count -eq 0) {
         $overallPassed = $false
     }
@@ -143,6 +150,9 @@ finally {
     $lines.Add("- Finished: $($finished.ToString('o'))")
     $lines.Add("- Host OS: $([System.Environment]::OSVersion.VersionString)")
     $lines.Add("- Overall result: **$(if ($overallPassed) { 'PASS' } else { 'FAIL / INCOMPLETE' })**")
+    if ($failureMessage) {
+        $lines.Add("- Failure reason: $failureMessage")
+    }
     $lines.Add('')
     $lines.Add('| Stage | Result | Exit code | Log |')
     $lines.Add('|---|---|---:|---|')
