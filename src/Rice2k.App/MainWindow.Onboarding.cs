@@ -12,6 +12,7 @@ public partial class MainWindow
         base.OnContentRendered(e);
         InitializePauseButtons();
         InitializeExperienceUi();
+        InitializeCollisionGuards();
 
         if (_onboardingChecked)
             return;
