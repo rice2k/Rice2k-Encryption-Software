@@ -17,7 +17,11 @@ public sealed record Rice2kAppSettings(
     bool AppLockEnabled = false,
     bool LockOnMinimize = false,
     bool LockOnWindowsSessionLock = false,
-    int AppLockInactivityMinutes = 0);
+    int AppLockInactivityMinutes = 0,
+    bool RememberRecentFiles = false,
+    bool PersistentActivityLogEnabled = false,
+    bool ClearDiskHistoryWhenPrivacyModeStarts = true,
+    bool ReduceMotion = false);
 
 public sealed class AppSettingsService
 {
