@@ -10,8 +10,13 @@
 - Three-step beginner-friendly **Encrypt** workflow
 - Three-step beginner-friendly **Decrypt** workflow
 - Drag-and-drop routing: normal files open Encrypt; `.r2kenc` files open Decrypt
-- Password confirmation before file encryption
-- Local strong-password generation for the Encrypt workflow
+- Multi-file drag-and-drop routing into the **Batch Queue**
+- User-facing batch encryption queue with Add Files, Remove Selected, Clear Queue, and drag-and-drop intake
+- Per-file batch status/progress and overall queue progress
+- Sequential batch encryption with isolated per-file failures
+- Safe batch cancellation that keeps completed encrypted outputs and removes the active incomplete temporary output
+- Password confirmation before file and batch encryption
+- Local strong-password generation for Encrypt and Batch workflows
 - Preflight checks for source readability, source/destination conflicts, destination availability, and free space when the destination exposes it
 - Automatic **Keep Both** naming so existing destination files are not overwritten
 - Dedicated operation screens with visible safety/encrypt/verify/finalize stages
@@ -37,9 +42,9 @@
 The full product is being implemented in milestones. Planned features include:
 
 - Folder encryption
-- Multi-file batch encryption and queue management
-- Overall and per-item batch progress
-- Drag-and-drop folders and multi-file batches
+- Folder drag-and-drop into batch/folder workflows
+- Batch output-folder controls and batch decryption
+- Pause/resume semantics for long operations
 - Simple and Advanced modes
 - Plain-English errors with expandable technical details
 - First-run tour and contextual hints
