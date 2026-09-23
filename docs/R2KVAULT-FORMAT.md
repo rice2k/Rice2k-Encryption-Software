@@ -123,6 +123,10 @@ Locking/disposal:
 
 No vault password is intentionally persisted by the vault service.
 
+The Vault Browser supports inactivity auto-lock choices of 1, 5, 10, 15, or 30 minutes. The preference is non-secret local application configuration. Missing preference fields from older settings files fall back to auto-lock enabled at 10 minutes.
+
+The UI blocks manual locking while a vault operation is active. A close request during a cancellable operation requests safe cancellation first rather than disposing the live session underneath the operation.
+
 ## Mutation safety model
 
 Add/remove/rename operations follow this order:
@@ -144,6 +148,35 @@ Add/remove/rename operations follow this order:
 If final verification fails, Rice2k attempts to restore the backup. If automatic restoration cannot complete, the `.backup` file is deliberately preserved for recovery review rather than deleted.
 
 A pre-existing `.backup` blocks further mutation so Rice2k does not overwrite potential recovery data.
+
+## Progress and cancellation
+
+The v0.4 Vault Browser has a progress-aware operation path for add, extract, rename, remove, and full verification. It reports the current stage and, when a meaningful byte total is available:
+
+- percentage;
+- bytes processed and total bytes;
+- approximate processing rate;
+- elapsed time;
+- estimated remaining time;
+- current vault entry/path.
+
+Long-running operations expose **Cancel safely**. Cancellation is checked before and between chunk/copy boundaries. Behavior depends on the stage:
+
+- before active replacement, the unique `.pending` file is discarded where possible and the active vault is left unchanged;
+- during restoration/extraction, the incomplete `.partial` output is discarded where possible and the vault is unchanged;
+- after the active vault has been replaced but while final verification is still running, cancellation/failure enters the same recovery path as a verification failure and attempts to restore the retained `.backup`.
+
+Completed authenticated source vault data is never intentionally deleted as part of cancellation.
+
+## Recovery-backup controls
+
+When `<vault>.backup` exists, normal vault mutations are blocked until the recovery copy is reviewed. The Vault Browser provides:
+
+- **Verify Backup** — authenticates the backup manifest and every encrypted file chunk without modifying either copy;
+- **Restore Backup** — verifies the backup, preserves the current active vault as a separate pre-recovery copy, restores the backup, then verifies the restored active vault;
+- **Move Backup Aside** — verifies the backup before moving it to a user-selected non-overwriting path.
+
+These controls are recovery aids, not a password bypass. The unlocked vault key is still required to authenticate the recovery copy.
 
 ## Sequence numbers and concurrent modification
 
@@ -177,14 +210,25 @@ Full verification authenticates:
 
 A corrupt vault fails closed rather than returning unauthenticated plaintext.
 
+## Fault-injection coverage in source
+
+The development service exposes internal test-only mutation checkpoints to the `Rice2k.Tests` assembly. Source-controlled tests inject failures at these boundaries:
+
+1. after the pending vault has fully authenticated but before active replacement;
+2. immediately after active replacement while the recovery backup exists;
+3. after the finalized vault has fully authenticated but before the recovery backup is released.
+
+The tests assert that the last known-good vault remains available or is restored and that the unlocked session is not advanced when the mutation does not complete.
+
+These tests are currently **source-controlled but not yet executed in this environment** because the .NET SDK / hosted runner is unavailable. Their presence is not equivalent to a successful release-gate run.
+
 ## Known development limitations
 
 Before stable 1.0 the vault still needs:
 
-- dedicated recovery-backup UI;
-- auto-lock integration;
-- large-vault performance profiling;
-- interruption/fault-injection tests around each atomic-replace stage;
+- successful execution of the full vault/fault-injection regression suite on the supported Windows/.NET 10 toolchain;
+- large-vault and multi-gigabyte performance profiling;
 - fuzzing of header, manifest, and record parsers;
+- a full keyboard/screen-reader/text-scaling/high-contrast accessibility review;
 - optional size-hiding/padding analysis;
-- external security review.
+- independent external security review.
