@@ -18,6 +18,69 @@ if (-not (Test-Path $SourceRoot)) {
 $failures = [System.Collections.Generic.List[string]]::new()
 $checks = 0
 
+function Get-CanonicalParameterSignature {
+    param([string]$Parameters)
+
+    if ([string]::IsNullOrWhiteSpace($Parameters)) {
+        return ''
+    }
+
+    # Split only on top-level commas so generic/tuple/array type syntax is not
+    # mistaken for a parameter boundary.
+    $parts = [System.Collections.Generic.List[string]]::new()
+    $builder = [System.Text.StringBuilder]::new()
+    $angleDepth = 0
+    $parenDepth = 0
+    $bracketDepth = 0
+
+    foreach ($ch in $Parameters.ToCharArray()) {
+        switch ($ch) {
+            '<' { $angleDepth++ }
+            '>' { if ($angleDepth -gt 0) { $angleDepth-- } }
+            '(' { $parenDepth++ }
+            ')' { if ($parenDepth -gt 0) { $parenDepth-- } }
+            '[' { $bracketDepth++ }
+            ']' { if ($bracketDepth -gt 0) { $bracketDepth-- } }
+            ',' {
+                if ($angleDepth -eq 0 -and $parenDepth -eq 0 -and $bracketDepth -eq 0) {
+                    $parts.Add($builder.ToString())
+                    [void]$builder.Clear()
+                    continue
+                }
+            }
+        }
+
+        [void]$builder.Append($ch)
+    }
+
+    if ($builder.Length -gt 0) {
+        $parts.Add($builder.ToString())
+    }
+
+    $canonical = foreach ($part in $parts) {
+        $parameter = $part.Trim()
+        # Attribute text and default values do not participate in an ordinary C#
+        # member signature. Parameter names do not either. Keep ref/out/in because
+        # value-vs-byref is relevant to duplicate detection; params/this are not.
+        $parameter = [regex]::Replace($parameter, '^\s*(?:\[[^\]]+\]\s*)+', '')
+        $parameter = [regex]::Replace($parameter, '\s*=\s*.*$', '')
+        $parameter = [regex]::Replace($parameter, '\s+', ' ').Trim()
+
+        $tokens = @($parameter -split ' ' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        if ($tokens.Count -le 1) {
+            $parameter
+            continue
+        }
+
+        # The final token is the parameter identifier. Remove non-signature
+        # declaration modifiers while preserving the remaining type declaration.
+        $typeTokens = @($tokens[0..($tokens.Count - 2)] | Where-Object { $_ -notin @('params', 'this') })
+        ($typeTokens -join ' ').Trim()
+    }
+
+    return ($canonical -join ',')
+}
+
 # Rice2k is a WPF application that enables WinForms only for its optional
 # notification bridge. With implicit usings enabled, the Windows Forms SDK can
 # inject System.Drawing and System.Windows.Forms globally; those namespaces
@@ -142,11 +205,10 @@ foreach ($entry in $classLifecycle.GetEnumerator()) {
 }
 
 # Ordinary methods can collide across partial files just as lifecycle overrides
-# can. This lightweight source check intentionally compares method name plus a
-# whitespace-normalized parameter declaration. It catches the common Rice2k
-# failure mode where a helper/event handler is copied into a second partial file,
-# while preserving legitimate overloads whose parameter declarations differ.
-# It is not a replacement for the C# compiler; it is an early fail-fast guard.
+# can. Compare method name plus a canonical parameter type/modifier signature.
+# Parameter identifiers/default values are intentionally ignored because they do
+# not make a distinct C# member signature. This is still an early fail-fast guard,
+# not a replacement for the compiler.
 $methodPattern = '(?ms)^\s*(?:public|private|protected|internal)\s+(?:(?:static|async|override|virtual|sealed|new|unsafe)\s+)*[A-Za-z_][A-Za-z0-9_<>,\.\?\[\]]*\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\((?<params>.*?)\)\s*(?:where\s+[^\{=>]+\s*)?(?:\{|=>)'
 $classMethods = @{}
 
@@ -164,7 +226,7 @@ foreach ($csFile in $csFiles) {
             continue
         }
 
-        $parameters = ($methodMatch.Groups['params'].Value -replace '\s+', ' ').Trim()
+        $parameters = Get-CanonicalParameterSignature $methodMatch.Groups['params'].Value
         $signature = "$className::$methodName($parameters)"
         if (-not $classMethods.ContainsKey($signature)) {
             $classMethods[$signature] = [System.Collections.Generic.List[string]]::new()
