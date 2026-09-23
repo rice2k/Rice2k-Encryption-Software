@@ -118,9 +118,15 @@ This document tracks implementation status and the remaining release gates. A ch
 - [x] Exact-value clipboard ownership check so Rice2k does not intentionally erase newer clipboard content
 - [x] App-wide clipboard generation so a newer Rice2k copy supersedes older timers across windows
 - [x] Protected clipboard integration for main text/password/checksum copies and identity/contact/recipient fingerprints
-- [ ] Authenticated app lock on minimize
-- [ ] App lock on Windows session lock
-- [ ] Configurable main-application inactivity lock
+- [x] Argon2id-backed authenticated App Lock credential verifier with 12-character minimum password
+- [x] App Lock on application startup once configured
+- [x] Manual Lock Rice2k action
+- [x] Authenticated app lock on minimize
+- [x] App lock on Windows session lock using `SystemEvents.SessionSwitch`
+- [x] Configurable main-application inactivity lock: Never / 1 / 5 / 10 / 15 / 30 minutes
+- [x] App Lock clears transient sensitive previews and Rice2k-owned clipboard content before showing the lock screen
+- [x] App Lock visually blanks existing Rice2k windows while preserving modal dialog lifecycle
+- [x] Source-controlled app-lock credential tests for round trip, wrong password, removal, tampered verifier, and hostile KDF parameters
 - [ ] Optional recent-file history
 - [x] In-memory activity log with sensitive-data avoidance
 - [ ] Persistent activity log with explicit opt-in and sensitive-data redaction
@@ -130,6 +136,7 @@ This document tracks implementation status and the remaining release gates. A ch
 - [ ] Windows notifications
 - [ ] Full keyboard-only encryption/decryption acceptance pass
 - [ ] Full screen-reader/high-contrast/text-scaling/reduced-motion review
+- [ ] Execute the v0.6 privacy/app-lock regression suite on supported Windows/.NET 10
 
 ## Milestone 0.7 — Interoperability and advanced controls
 
