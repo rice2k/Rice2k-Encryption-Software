@@ -260,7 +260,7 @@ public partial class BatchQueueWindow : Window
             if (_closeWhenFinished)
             {
                 _closeWhenFinished = false;
-                Dispatcher.BeginInvoke(Close);
+                Dispatcher.InvokeAsync(Close);
             }
         }
     }
@@ -324,7 +324,7 @@ public partial class BatchQueueWindow : Window
 
     private void SetRunning(bool running)
     {
-        StartBatchButton.IsEnabled = !running;
+        StartBatchButton.IsEnabled = !running && _items.Count > 0;
         CancelBatchButton.IsEnabled = running;
         AddFilesButton.IsEnabled = !running;
         RemoveSelectedButton.IsEnabled = !running;
