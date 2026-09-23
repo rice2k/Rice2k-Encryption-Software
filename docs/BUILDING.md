@@ -21,7 +21,7 @@ cd Rice2k-Encryption-Software
 
 ## Fast WPF source preflight
 
-Before restore/build, the repository can scan common WPF wiring problems:
+Before restore/build, the repository can scan common WPF/source-wiring problems:
 
 ```powershell
 PowerShell -ExecutionPolicy Bypass -File .\tools\Static-WpfPreflight.ps1
@@ -29,15 +29,17 @@ PowerShell -ExecutionPolicy Bypass -File .\tools\Static-WpfPreflight.ps1
 
 The preflight checks:
 
+- WPF + WinForms implicit-using isolation so WinForms/Drawing namespaces do not silently create ambiguous WPF type names;
 - XAML event-handler names that have no code-behind implementation;
 - XAML event handlers accidentally implemented more than once across partial-class files;
-- duplicate WPF lifecycle overrides such as `OnInitialized`, `OnContentRendered`, `OnSourceInitialized`, or `OnDrop` across the same partial class.
+- duplicate WPF lifecycle overrides such as `OnInitialized`, `OnContentRendered`, `OnSourceInitialized`, or `OnDrop` across the same partial class;
+- duplicate ordinary methods across partial-class files using a canonicalized parameter type/modifier signature that ignores parameter names and default values.
 
-This is an early-warning check only. It does **not** replace the .NET compiler or the security/regression suite.
+This is an early-warning source check only. It does **not** replace the C# compiler or the security/regression suite.
 
 ## Recommended stabilization validation
 
-For Beta/readiness work, run the repository validator from PowerShell:
+For Beta/readiness work, run the repository validator from Windows PowerShell 5.1 or a newer PowerShell edition:
 
 ```powershell
 PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1
@@ -45,7 +47,7 @@ PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1
 
 It records:
 
-- static WPF preflight output;
+- static WPF/source preflight output;
 - `dotnet --info`;
 - complete solution restore output;
 - Release build output;
@@ -60,7 +62,7 @@ Results are written to:
 artifacts\validation\<timestamp>\
 ```
 
-`artifacts/` is ignored by Git so local validation logs are not accidentally committed. A failed build/test attempt remains visible in the generated report rather than being rewritten as a pass.
+`artifacts/` is ignored by Git so local validation logs are not accidentally committed. A failed build/test attempt remains visible in the generated report rather than being rewritten as a pass. The validator deliberately avoids PowerShell-7-only path APIs so the recommended Windows PowerShell command can generate the report correctly.
 
 ## Restore and build manually
 
