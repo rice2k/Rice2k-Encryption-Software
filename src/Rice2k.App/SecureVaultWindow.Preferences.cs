@@ -31,9 +31,10 @@ public partial class SecureVaultWindow
         try
         {
             var settings = _vaultSettingsService.Load();
-            AutoLockCheckBox.IsChecked = settings.VaultAutoLockEnabled;
-            var minutes = NormalizeAutoLockMinutes(settings.VaultAutoLockMinutes);
+            var enabled = settings.VaultAutoLockEnabled ?? true;
+            var minutes = NormalizeAutoLockMinutes(settings.VaultAutoLockMinutes ?? 10);
 
+            AutoLockCheckBox.IsChecked = enabled;
             foreach (var item in AutoLockMinutesComboBox.Items.OfType<ComboBoxItem>())
             {
                 if (int.TryParse(item.Tag?.ToString(), out var value) && value == minutes)
@@ -43,7 +44,7 @@ public partial class SecureVaultWindow
                 }
             }
 
-            AutoLockMinutesComboBox.IsEnabled = settings.VaultAutoLockEnabled;
+            AutoLockMinutesComboBox.IsEnabled = enabled;
         }
         finally
         {
