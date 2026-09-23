@@ -4,15 +4,22 @@ namespace Rice2k.Encryption.Models;
 
 public sealed class ManagedKey : IDisposable
 {
+    private const int MaximumNameCharacters = 200;
     private byte[]? _secretKey;
 
     internal ManagedKey(Guid id, string name, DateTimeOffset createdUtc, string source, byte[] secretKey)
     {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Rice2k symmetric keys require a non-empty identifier.", nameof(id));
         if (secretKey.Length != 32)
             throw new ArgumentException("Rice2k symmetric keys must be exactly 256 bits.", nameof(secretKey));
 
+        var normalizedName = string.IsNullOrWhiteSpace(name) ? "Unnamed Key" : name.Trim();
+        if (normalizedName.Length > MaximumNameCharacters)
+            throw new ArgumentException($"Rice2k key names must be {MaximumNameCharacters} characters or fewer.", nameof(name));
+
         Id = id;
-        Name = string.IsNullOrWhiteSpace(name) ? "Unnamed Key" : name.Trim();
+        Name = normalizedName;
         CreatedUtc = createdUtc;
         Source = source;
         _secretKey = secretKey.ToArray();
