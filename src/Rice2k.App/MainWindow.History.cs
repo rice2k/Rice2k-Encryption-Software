@@ -7,6 +7,7 @@ namespace Rice2k.Encryption;
 public partial class MainWindow
 {
     private readonly PrivacyHistoryService _privacyHistoryService = new();
+    private INotifyCollectionChanged? _activityItemsNotifier;
     private bool _privacyHistoryInitialized;
 
     private void InitializePrivacyHistoryUi()
@@ -15,13 +16,17 @@ public partial class MainWindow
             return;
 
         _privacyHistoryInitialized = true;
-        ((INotifyCollectionChanged)ActivityList.Items).CollectionChanged += ActivityItems_CollectionChanged;
+        _activityItemsNotifier = ActivityList.Items as INotifyCollectionChanged;
+        if (_activityItemsNotifier is not null)
+            _activityItemsNotifier.CollectionChanged += ActivityItems_CollectionChanged;
+
         EncryptSourceBox.TextChanged += RecentEncryptSource_Changed;
         DecryptSourceBox.TextChanged += RecentDecryptSource_Changed;
 
         Closed += (_, _) =>
         {
-            ((INotifyCollectionChanged)ActivityList.Items).CollectionChanged -= ActivityItems_CollectionChanged;
+            if (_activityItemsNotifier is not null)
+                _activityItemsNotifier.CollectionChanged -= ActivityItems_CollectionChanged;
             EncryptSourceBox.TextChanged -= RecentEncryptSource_Changed;
             DecryptSourceBox.TextChanged -= RecentDecryptSource_Changed;
         };
