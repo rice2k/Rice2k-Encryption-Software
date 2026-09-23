@@ -63,6 +63,21 @@ public sealed class AppSettingsServiceTests
     }
 
     [Fact]
+    public void Load_OversizedSettingsFile_ReturnsSafeDefaultsBeforeParsing()
+    {
+        using var temp = new TempDirectory();
+        File.WriteAllBytes(temp.PathFor("settings.json"), new byte[(256 * 1024) + 1]);
+        var service = new AppSettingsService(temp.DirectoryPath);
+
+        var loaded = service.Load();
+
+        Assert.False(loaded.PrivacyModeEnabled);
+        Assert.False(loaded.AppLockEnabled);
+        Assert.Equal(30, loaded.ClipboardAutoClearSeconds);
+        Assert.Equal(0, loaded.AppLockInactivityMinutes);
+    }
+
+    [Fact]
     public void TrySave_NormalizesUnsupportedTimingValues()
     {
         using var temp = new TempDirectory();
