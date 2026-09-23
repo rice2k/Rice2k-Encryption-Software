@@ -8,8 +8,8 @@ public sealed record Rice2kAppSettings(
     DateTimeOffset? LastRecoveryTestUtc = null,
     string? LastRecoveryFingerprint = null,
     string? LastRecoveryKeyName = null,
-    bool VaultAutoLockEnabled = true,
-    int VaultAutoLockMinutes = 10);
+    bool? VaultAutoLockEnabled = null,
+    int? VaultAutoLockMinutes = null);
 
 public sealed class AppSettingsService
 {
