@@ -1,0 +1,51 @@
+# Build output
+bin/
+obj/
+artifacts/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Test output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Publish output
+publish/
+releases/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Local settings / sensitive test data
+*.local.json
+*.secrets.json
+*.key
+*.r2kkey
+*.r2krecovery
+*.r2kenc
+*.r2kvault
+
+# Logs
+*.log
+logs/
