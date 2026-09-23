@@ -2,7 +2,7 @@
 
 **Rice2k Encryption Software** is a modern, user-friendly Windows encryption application designed to make strong data protection understandable and practical for everyday users while still providing advanced security tools for experienced users.
 
-> **Project status:** early development / security-focused preview. Current application version: **0.6.0-preview.2**. Do not use a pre-1.0 build as the only copy of irreplaceable data, recovery material, or private keys.
+> **Project status:** early development / security-focused preview. Current application version: **0.6.0-preview.3**. Do not use a pre-1.0 build as the only copy of irreplaceable data, recovery material, or private keys.
 
 ## Current development features
 
@@ -15,6 +15,9 @@
 - Detailed operation status: percentage, bytes, speed, elapsed time, ETA, and current stage
 - Completion screens that clearly identify the output and verification result
 - Main status bar reads the actual application assembly version
+- Expanded keyboard navigation with F6 / Shift+F6 focus movement and shortcuts for major pages, Privacy Mode, App Lock, Settings, and Security Center
+- Shared visible keyboard-focus borders
+- Startup high-contrast palette mapping to Windows system colors
 
 ### File and folder protection
 
@@ -119,7 +122,7 @@ Rice2k `.r2ksig` signatures use Ed25519 plus SHA-512 file hashing:
 
 Use recipient encryption when you need confidentiality. Use signatures when you need authenticity/integrity. Use both when you need both properties.
 
-## Privacy and App Lock — v0.6 preview
+## Privacy, App Lock, and Security Center — v0.6 preview
 
 The v0.6 privacy layer now includes:
 
@@ -135,15 +138,34 @@ The v0.6 privacy layer now includes:
 - authenticated **App Lock** using an Argon2id-derived verifier stored separately from the password;
 - 12-character minimum App Lock password;
 - automatic App Lock at application startup after it has been configured;
-- manual **Lock Rice2k** action;
+- startup presentation blanking so configured App Lock authenticates before the main interface or onboarding dialogs are exposed;
+- manual **Lock Rice2k** action and `Ctrl+L` shortcut;
 - optional lock-on-minimize;
 - optional lock when Windows reports that the current user session was locked;
 - configurable inactivity lock: **Never, 1, 5, 10, 15, or 30 minutes** without Rice2k input;
 - sensitive preview and Rice2k-owned clipboard clearing before the lock screen is shown;
 - existing Rice2k dialogs visually blanked while the modal lock screen owns application input, preserving their dialog lifecycle;
+- restoration guarded by `finally` so an unexpected lock-dialog failure does not intentionally leave Rice2k windows permanently blanked;
+- App Lock configuration rollback/consistency handling when local settings persistence fails;
 - clear Local / offline status messaging.
 
 App Lock is an application-level privacy barrier. It is not a substitute for Windows sign-in security, BitLocker/full-disk encryption, or the independent passwords and keys that protect `.r2kenc`, `.r2kvault`, `.r2kkey`, `.r2kid`, and recovery material. A user or process that already controls the same Windows account and can modify Rice2k's local files is outside the App Lock security boundary.
+
+### Security Center
+
+The operational **Security Center** provides a safe local summary without displaying passwords, secret keys, or plaintext:
+
+- current application preview version and local/offline status;
+- cryptographic defaults;
+- Privacy Mode and clipboard policy;
+- App Lock credential/enable state and active triggers;
+- Secure Vault inactivity auto-lock state;
+- last recorded successful recovery test metadata;
+- explicit pre-1.0 validation limitations;
+- Refresh, Lock Rice2k, and Open Settings actions;
+- `Ctrl+Shift+S` keyboard shortcut.
+
+Security Center reports configuration. It does not turn an unexecuted test suite or an unreviewed preview into a validated release.
 
 ## Security/regression testing foundation
 
@@ -158,11 +180,11 @@ The source-controlled xUnit suite covers, among other areas:
 - recipient and multi-recipient encryption/decryption;
 - detached signature creation, verification, and tamper detection;
 - public identity contact-store import/load/remove/tamper behavior;
-- app-lock credential round trip, wrong-password rejection, removal behavior, verifier modification, and hostile Argon2 parameter rejection.
+- App Lock credential round trip, wrong-password rejection, safe removal behavior, verifier modification, minimum-password policy, malformed JSON, unsupported versions, invalid salt length, oversized credential files, and hostile Argon2 operation/memory parameters.
 
 `tools/Rice2k.VaultBench` provides a repeatable local benchmark/correctness harness for larger vault workloads.
 
-> **Validation limitation:** the current working environment does not contain the .NET SDK, and GitHub-hosted Actions jobs have not been assigned a runner during attempted validation. The newer tests and v0.6 App Lock/UI changes are committed and source-reviewed but are **not claimed as compiled or executed** here.
+> **Validation limitation:** the current working environment does not contain the .NET SDK. GitHub Actions validation attempts, including the latest retry, have ended before executing any workflow steps, so those runs do not establish either compilation success or source-code failure. The newer tests and v0.6 UI/App Lock changes are committed and source-reviewed but are **not claimed as compiled or executed** here.
 
 ## File formats
 
@@ -217,7 +239,7 @@ Major release gates still include:
 
 - execute the full test suite on the supported Windows/.NET 10 toolchain;
 - large-vault and multi-gigabyte benchmark runs;
-- complete v0.6 Privacy Mode/App Lock acceptance testing on Windows;
+- complete v0.6 Privacy Mode/App Lock/Security Center acceptance testing on Windows;
 - optional recent-history and opt-in redacted persistent activity design;
 - full keyboard/screen-reader/high-contrast/scaling/reduced-motion review;
 - Advanced Mode and compatibility controls;
