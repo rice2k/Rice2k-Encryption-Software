@@ -25,11 +25,14 @@ public sealed class KeyFileEncryptionService
     private const int DefaultChunkSize = 4 * 1024 * 1024;
     private const int SaltSize = 16;
     private const int NonceSize = 24;
+    private const int AuthenticationTagSize = 16;
     private const int MinimumEncryptionPasswordLength = 12;
+    private const int MaximumOriginalNameCharacters = 1024;
     private const long MaximumSupportedOpsLimit = 10;
     private const int MaximumSupportedMemLimit = 256 * 1024 * 1024;
     private const int MaximumSupportedChunkSize = 64 * 1024 * 1024;
     private const int MaximumMetadataCipherLength = 64 * 1024;
+    private const int MaximumMetadataPlainLength = MaximumMetadataCipherLength - AuthenticationTagSize;
     private const int MaximumFingerprintBytes = 64;
 
     private readonly AsyncPauseGate _pauseGate = new();
@@ -134,6 +137,9 @@ public sealed class KeyFileEncryptionService
         _pauseGate.Resume();
 
         var sourceInfo = new FileInfo(sourcePath);
+        if (!IsValidOriginalName(sourceInfo.Name))
+            throw new IOException("The source filename cannot be represented safely in Rice2k key-file encrypted metadata.");
+
         var tempPath = CreateUniqueTempPath(destinationPath);
         var passwordBytes = Encoding.UTF8.GetBytes(password);
         var keyFileSecret = managedKey.CopySecretKey();
@@ -145,9 +151,7 @@ public sealed class KeyFileEncryptionService
             var salt = PasswordHash.ArgonGenerateSalt();
             key = DeriveCompositeKey(passwordBytes, keyFileSecret, salt, DefaultOpsLimit, DefaultMemLimit);
 
-            var chunkCount = sourceInfo.Length == 0
-                ? 0
-                : (sourceInfo.Length + DefaultChunkSize - 1) / DefaultChunkSize;
+            var chunkCount = ComputeExpectedChunkCount(sourceInfo.Length, DefaultChunkSize);
 
             var metadata = new FileMetadata(
                 sourceInfo.Name,
@@ -169,7 +173,12 @@ public sealed class KeyFileEncryptionService
             byte[] metadataCipher;
             try
             {
+                if (metadataPlain.Length > MaximumMetadataPlainLength)
+                    throw new InvalidDataException("The encrypted-file metadata is too large for the supported R2KENC02 format.");
+
                 metadataCipher = SecretAeadXChaCha20Poly1305.Encrypt(metadataPlain, metadataNonce, key, headerAuth);
+                if (metadataCipher.Length > MaximumMetadataCipherLength)
+                    throw new InvalidOperationException("Rice2k generated R2KENC02 metadata outside its supported format limit.");
             }
             finally
             {
@@ -381,7 +390,7 @@ public sealed class KeyFileEncryptionService
                 {
                     index = reader.ReadInt64();
                     cipherLength = reader.ReadInt32();
-                    if (cipherLength < 16 || cipherLength > metadata.ChunkSize + 64)
+                    if (cipherLength < AuthenticationTagSize || cipherLength > metadata.ChunkSize + 64)
                         throw new InvalidDataException("The encrypted chunk length is invalid.");
 
                     nonce = reader.ReadBytes(NonceSize);
@@ -444,6 +453,8 @@ public sealed class KeyFileEncryptionService
         var fingerprintBytes = Encoding.ASCII.GetBytes(fingerprint);
         if (fingerprintBytes.Length == 0 || fingerprintBytes.Length > MaximumFingerprintBytes)
             throw new InvalidDataException("The selected key fingerprint cannot be represented in the encrypted header.");
+        if (metadataCipher.Length < AuthenticationTagSize || metadataCipher.Length > MaximumMetadataCipherLength)
+            throw new InvalidDataException("The encrypted metadata length is outside the supported R2KENC02 format range.");
 
         writer.Write(Magic);
         writer.Write(Version);
@@ -502,7 +513,7 @@ public sealed class KeyFileEncryptionService
         if (metadataNonce.Length != NonceSize)
             throw new InvalidDataException("The encrypted file header is truncated.");
         var metadataCipherLength = reader.ReadInt32();
-        if (metadataCipherLength < 16 || metadataCipherLength > MaximumMetadataCipherLength)
+        if (metadataCipherLength < AuthenticationTagSize || metadataCipherLength > MaximumMetadataCipherLength)
             throw new InvalidDataException("The encrypted metadata length is invalid.");
         var metadataCipher = reader.ReadBytes(metadataCipherLength);
         if (metadataCipher.Length != metadataCipherLength)
@@ -514,17 +525,30 @@ public sealed class KeyFileEncryptionService
 
     private static void ValidateMetadata(FileMetadata metadata, Header header)
     {
-        if (string.IsNullOrWhiteSpace(metadata.OriginalName))
-            throw new InvalidDataException("The encrypted file metadata does not contain an original filename.");
+        if (!IsValidOriginalName(metadata.OriginalName))
+            throw new InvalidDataException("The encrypted file metadata contains an invalid original filename.");
         if (metadata.OriginalLength < 0 || metadata.ChunkCount < 0)
             throw new InvalidDataException("The encrypted file metadata contains invalid lengths.");
         if (metadata.ChunkSize != header.ChunkSize || !string.Equals(metadata.RequiredKeyFingerprint, header.KeyFingerprint, StringComparison.Ordinal))
             throw new InvalidDataException("The encrypted file metadata does not match its authenticated header.");
 
-        var expectedChunkCount = metadata.OriginalLength == 0 ? 0 : (metadata.OriginalLength + metadata.ChunkSize - 1) / metadata.ChunkSize;
+        var expectedChunkCount = ComputeExpectedChunkCount(metadata.OriginalLength, metadata.ChunkSize);
         if (metadata.ChunkCount != expectedChunkCount)
             throw new InvalidDataException("The encrypted file metadata contains an inconsistent chunk count.");
     }
+
+    private static long ComputeExpectedChunkCount(long length, int chunkSize)
+    {
+        if (length < 0 || chunkSize <= 0)
+            throw new InvalidDataException("The encrypted file metadata contains invalid chunk parameters.");
+        return length == 0 ? 0 : 1 + ((length - 1) / chunkSize);
+    }
+
+    private static bool IsValidOriginalName(string? name) =>
+        !string.IsNullOrWhiteSpace(name) &&
+        name.Length <= MaximumOriginalNameCharacters &&
+        name.IndexOf('/') < 0 &&
+        name.IndexOf('\\') < 0;
 
     private static byte[] DeriveCompositeKey(byte[] passwordBytes, byte[] keyFileSecret, byte[] salt, long opsLimit, int memLimit)
     {
