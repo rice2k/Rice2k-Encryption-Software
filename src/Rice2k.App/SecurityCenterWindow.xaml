@@ -1,0 +1,123 @@
+<Window x:Class="Rice2k.Encryption.SecurityCenterWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rice2k Security Center"
+        AutomationProperties.Name="Rice2k Security Center"
+        Width="920" Height="760"
+        MinWidth="760" MinHeight="620"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Security Center" FontSize="30" FontWeight="SemiBold" />
+            <TextBlock Text="Review Rice2k's current local protection and privacy configuration. No passwords, secret keys, or plaintext are shown here."
+                       Foreground="{StaticResource MutedTextBrush}"
+                       Margin="0,4,0,0" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Application status" FontSize="18" FontWeight="SemiBold" />
+                            <TextBlock x:Name="VersionText" Margin="0,8,0,0" />
+                            <TextBlock Text="Local / offline by design" Foreground="{StaticResource SuccessBrush}" Margin="0,5,0,0" />
+                            <TextBlock Text="Pre-1.0 preview: keep independent backups and verify recovery workflows before relying on the application for irreplaceable data."
+                                       Foreground="{StaticResource WarningBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="LOCAL" Foreground="{StaticResource PrimaryBrush}" FontWeight="Bold" VerticalAlignment="Top" Margin="20,2,0,0" />
+                    </Grid>
+                </Border>
+
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Cryptographic defaults" FontSize="18" FontWeight="SemiBold" />
+                            <TextBlock Text="✓ XChaCha20-Poly1305 authenticated encryption" Margin="0,9,0,3" />
+                            <TextBlock Text="✓ Argon2id password hardening" Margin="0,0,0,3" />
+                            <TextBlock Text="✓ Authenticated encrypted metadata" Margin="0,0,0,3" />
+                            <TextBlock Text="✓ Streaming/chunked file processing" />
+                            <TextBlock Text="File formats remain development formats until the 1.0 review gates are complete."
+                                       Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,9,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Privacy Mode" FontSize="18" FontWeight="SemiBold" />
+                            <TextBlock x:Name="PrivacyModeText" FontWeight="SemiBold" Margin="0,9,0,3" />
+                            <TextBlock x:Name="ClipboardText" Margin="0,0,0,3" />
+                            <TextBlock x:Name="ActivityPrivacyText" />
+                            <TextBlock Text="Privacy Mode changes the running interface; it is not an encryption algorithm."
+                                       Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,9,0,0" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Authenticated App Lock" FontSize="18" FontWeight="SemiBold" />
+                            <TextBlock x:Name="AppLockText" FontWeight="SemiBold" Margin="0,9,0,3" />
+                            <TextBlock x:Name="AppLockTriggersText" TextWrapping="Wrap" />
+                            <TextBlock Text="App Lock is a local UI privacy barrier. It does not replace Windows sign-in, BitLocker/full-disk encryption, or individual Rice2k file/vault passwords."
+                                       Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,9,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Secure Vault auto-lock" FontSize="18" FontWeight="SemiBold" />
+                            <TextBlock x:Name="VaultLockText" FontWeight="SemiBold" Margin="0,9,0,3" />
+                            <TextBlock Text="Vault auto-lock is separate from main App Lock and clears the unlocked vault session key when the vault is locked."
+                                       Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,9,0,0" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Recovery readiness" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock x:Name="RecoveryText" FontWeight="SemiBold" Margin="0,9,0,3" />
+                        <TextBlock x:Name="RecoveryDetailText" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Validation status" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock Text="⚠ Source-controlled regression tests exist, but this preview is not being presented as validated until the supported Windows/.NET 10 build and test gates execute successfully."
+                                   Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,9,0,0" />
+                        <TextBlock Text="A failed GitHub Actions job with zero executed steps is treated as runner/infrastructure failure, not as a successful or failed source compilation."
+                                   Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,7,0,0" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText"
+                       Text="Security status loaded from local Rice2k preferences."
+                       AutomationProperties.Name="Security Center status"
+                       AutomationProperties.LiveSetting="Polite"
+                       Foreground="{StaticResource MutedTextBrush}"
+                       VerticalAlignment="Center" />
+            <WrapPanel Grid.Column="1">
+                <Button Content="Refresh" Click="Refresh_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                <Button x:Name="LockNowButton" Content="Lock Rice2k" Click="LockNow_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                <Button Content="Open Settings" Click="OpenSettings_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                <Button Content="Close" Click="Close_Click" />
+            </WrapPanel>
+        </Grid>
+    </Grid>
+</Window>
