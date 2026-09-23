@@ -58,6 +58,25 @@
 - SHA-256 and SHA-512 file integrity tools
 - In-memory activity view that does not record passwords, plaintext, or secret keys
 
+### Password + key-file protection
+
+The guided Encrypt workflow now offers two protection modes:
+
+- **Password only** — existing `R2KENC01` v1 format;
+- **Password + Rice2k key file** — `R2KENC02` v2 format requiring both the file password and the matching 256-bit key from an encrypted `.r2kkey` package.
+
+For v2 files Rice2k:
+
+- unlocks the selected `.r2kkey` package only in memory;
+- combines the Argon2id password-derived key with the 256-bit key-file secret using domain-separated HMAC-SHA-256;
+- uses the resulting 256-bit content key with XChaCha20-Poly1305;
+- places only the safe key fingerprint in the public container header;
+- binds the required fingerprint into authenticated metadata/header data;
+- automatically detects v2 files during decryption and tells the user which key fingerprint is expected;
+- supports the same progress, pause/resume, cancellation cleanup, verification, and non-overwrite protections as the password-only workflow.
+
+Existing v1 files remain supported and are not silently rewritten.
+
 ### Key Manager
 
 - Generate random **256-bit symmetric keys** locally
@@ -91,7 +110,11 @@ The solution includes an xUnit v3 test project with current source-controlled co
 - encrypted-text round trips and fresh randomness;
 - wrong-password and ciphertext-tamper failures;
 - malformed text-token validation;
-- empty, normal, and multi-chunk file round trips;
+- empty, normal, and multi-chunk password-only file round trips;
+- password + key-file round trips;
+- wrong-key and wrong-password rejection for v2 containers;
+- v2 ciphertext tamper detection;
+- v1/v2 container detection compatibility;
 - source-file preservation;
 - file tampering and truncation rejection;
 - unauthenticated KDF resource-limit rejection before key derivation;
@@ -108,7 +131,6 @@ The suite is source-controlled but has **not yet been executed by hosted CI** be
 
 The full product is being implemented in milestones. Major planned work includes:
 
-- Password + key-file protection for encrypted files
 - Dedicated folder-container encryption workflow beyond batch-per-file encryption
 - Batch output-folder controls and batch decryption
 - Full caught-error technical-details integration across every routine workflow
@@ -137,13 +159,13 @@ See [docs/ROADMAP.md](docs/ROADMAP.md), [docs/UX-SPEC.md](docs/UX-SPEC.md), and 
 
 | Extension | Purpose | Status |
 |---|---|---|
-| `.r2kenc` | Rice2k encrypted file/container | Development implementation |
+| `.r2kenc` | Rice2k encrypted file/container (`R2KENC01` password-only and `R2KENC02` password + key-file) | Development implementation |
 | `.r2kkey` | Password-protected symmetric key package | Development implementation |
 | `.r2krecovery` | Separately password-protected recovery package | Development implementation |
 | `.r2kvault` | Rice2k secure vault | Planned |
 | `.r2ksig` | Rice2k detached signature | Planned |
 
-The development `.r2kenc` layout is documented in [docs/R2KENC-FORMAT.md](docs/R2KENC-FORMAT.md). Key and recovery packages are documented in [docs/R2KKEY-RECOVERY-FORMATS.md](docs/R2KKEY-RECOVERY-FORMATS.md). These formats may change before 1.0.
+The development `.r2kenc` layouts are documented in [docs/R2KENC-FORMAT.md](docs/R2KENC-FORMAT.md). Key and recovery packages are documented in [docs/R2KKEY-RECOVERY-FORMATS.md](docs/R2KKEY-RECOVERY-FORMATS.md). These formats may change before 1.0.
 
 ## Security direction
 
@@ -180,7 +202,7 @@ docs/
   BUILDING.md                       Local build/run/test instructions
   ROADMAP.md                        Milestones and 1.0 release gates
   SECURITY-DESIGN.md                Security architecture and threat notes
-  R2KENC-FORMAT.md                  Development encrypted-container format
+  R2KENC-FORMAT.md                  Password-only and password + key-file container formats
   R2KKEY-RECOVERY-FORMATS.md        Key/recovery package formats
   UX-SPEC.md                        User-interface and usability specification
 .github/workflows/
@@ -191,7 +213,7 @@ docs/
 
 A GitHub Actions workflow is included, but during initial setup GitHub-hosted jobs terminated before any runner was assigned (`runner_id: 0`, zero executed steps), including both Windows and Ubuntu attempts. Automatic push builds are therefore disabled for now to avoid presenting infrastructure failure as a source-code compilation failure. The manual workflow remains available for dispatch once a hosted runner is assigned.
 
-The current working environment also does not contain the .NET SDK, so newly added v0.3 key/recovery tests have been source-reviewed but not executed here. Treat the preview as development software until the full build/test gate runs successfully.
+The current working environment also does not contain the .NET SDK, so newly added v0.3 key/recovery/key-file tests have been source-reviewed but not executed here. Treat the preview as development software until the full build/test gate runs successfully.
 
 ## License
 
