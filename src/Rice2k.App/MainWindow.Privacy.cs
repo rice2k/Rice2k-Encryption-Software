@@ -85,6 +85,9 @@ public partial class MainWindow
         if (enablingNow && settings.ClearSensitivePreviewsWhenPrivacyModeStarts)
             ClearTransientSensitivePreviews();
 
+        if (enablingNow && settings.ClearDiskHistoryWhenPrivacyModeStarts)
+            _privacyHistoryService.TryClearAll();
+
         RefreshPrivacyQuickToggle();
         ApplyAppLockSettings(settings);
         if (_privacyUiInitialized)
