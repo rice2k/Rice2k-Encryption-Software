@@ -1,0 +1,54 @@
+<Window x:Class="Rice2k.Encryption.PublicIdentityContactsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rice2k Public Identity Contacts"
+        Width="920" Height="590"
+        MinWidth="760" MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        Loaded="Window_Loaded">
+    <Grid Margin="22">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="Public Identity Contacts" FontSize="28" FontWeight="SemiBold" />
+            <TextBlock Text="Saved contacts contain public keys only. A valid self-signature proves the card was not internally altered, but it does not prove who owns the display name. Compare fingerprints through an independent trusted channel."
+                       Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,5,0,0" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <ListView x:Name="ContactsList" SelectionMode="Extended" AutomationProperties.Name="Saved public identity contacts">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Name label" DisplayMemberBinding="{Binding Name}" Width="180" />
+                            <GridViewColumn Header="Fingerprint" DisplayMemberBinding="{Binding Fingerprint}" Width="430" />
+                            <GridViewColumn Header="Created" DisplayMemberBinding="{Binding CreatedDisplay}" Width="150" />
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <Border Grid.Row="1" Background="#0A1423" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock x:Name="StatusText" Text="Loading contacts…" FontWeight="SemiBold" />
+                        <TextBlock x:Name="DetailText" Text="Only validated .r2kpub cards are listed." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,14,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <WrapPanel>
+                <Button Content="Import Contact…" Click="ImportContact_Click" />
+                <Button Content="Remove Saved Contact" Click="RemoveContact_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                <Button Content="Copy Fingerprint" Click="CopyFingerprint_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                <Button Content="Open Contacts Folder" Click="OpenContactsFolder_Click" Style="{StaticResource SecondaryButtonStyle}" />
+            </WrapPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="Use Selected Recipients" Click="UseSelected_Click" MinWidth="170" IsDefault="True" />
+                <Button Content="Close" IsCancel="True" Style="{StaticResource SecondaryButtonStyle}" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
