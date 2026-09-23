@@ -13,6 +13,9 @@ public partial class IdentityManagerWindow : Window
     private readonly IdentityService _service = new();
     private readonly ProtectedClipboardService _clipboard = new();
     private readonly ObservableCollection<Rice2kIdentity> _identities = [];
+    private CancellationTokenSource? _operationCts;
+    private bool _busy;
+    private bool _closeWhenFinished;
 
     public IdentityManagerWindow()
     {
@@ -22,6 +25,9 @@ public partial class IdentityManagerWindow : Window
 
     private void GenerateIdentity_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         var name = IdentityNameBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -38,6 +44,9 @@ public partial class IdentityManagerWindow : Window
 
     private async void ImportPrivate_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         var dialog = new OpenFileDialog
         {
             Title = "Import Rice2k private identity",
@@ -55,13 +64,17 @@ public partial class IdentityManagerWindow : Window
         if (password is null)
             return;
 
+        BeginOperation("Authenticating private identity…");
         Rice2kIdentity? identity = null;
         try
         {
-            identity = await _service.ImportPrivateAsync(dialog.FileName, password);
+            identity = await _service.ImportPrivateAsync(dialog.FileName, password, _operationCts!.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
+
             if (_identities.Any(existing => existing.Id == identity.Id || existing.Fingerprint == identity.Fingerprint))
             {
                 identity.Dispose();
+                identity = null;
                 ShowError("That identity is already loaded in this Identity Manager session.");
                 return;
             }
@@ -69,21 +82,33 @@ public partial class IdentityManagerWindow : Window
             _identities.Add(identity);
             IdentityList.SelectedItem = identity;
             StatusText.Text = $"✓ Imported {identity.Name} • {identity.Fingerprint}";
+            identity = null; // ownership transferred to _identities
+        }
+        catch (OperationCanceledException)
+        {
+            identity?.Dispose();
             identity = null;
+            StatusText.Text = "Private identity import cancelled safely. No new private identity was retained.";
         }
         catch (Exception ex)
         {
+            identity?.Dispose();
+            identity = null;
             ShowError(ex.Message);
         }
         finally
         {
             identity?.Dispose();
             password = string.Empty;
+            EndOperation();
         }
     }
 
     private async void ExportPrivate_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         if (IdentityList.SelectedItem is not Rice2kIdentity identity)
         {
             ShowError("Select an identity first.");
@@ -107,12 +132,21 @@ public partial class IdentityManagerWindow : Window
             FileName = SanitizeFileName(identity.Name) + ".r2kid"
         };
         if (dialog.ShowDialog(this) != true)
+        {
+            password = string.Empty;
             return;
+        }
 
+        BeginOperation("Encrypting private identity package…");
         try
         {
-            await _service.ExportPrivateAsync(identity, dialog.FileName, password);
+            await _service.ExportPrivateAsync(identity, dialog.FileName, password, _operationCts!.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
             StatusText.Text = $"✓ Private identity exported: {Path.GetFileName(dialog.FileName)}";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Private identity export cancelled safely. Incomplete temporary output was removed where possible.";
         }
         catch (Exception ex)
         {
@@ -121,11 +155,15 @@ public partial class IdentityManagerWindow : Window
         finally
         {
             password = string.Empty;
+            EndOperation();
         }
     }
 
     private async void ExportPublic_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         if (IdentityList.SelectedItem is not Rice2kIdentity identity)
         {
             ShowError("Select an identity first.");
@@ -144,19 +182,32 @@ public partial class IdentityManagerWindow : Window
         if (dialog.ShowDialog(this) != true)
             return;
 
+        BeginOperation("Creating authenticated public identity card…");
         try
         {
-            await _service.ExportPublicAsync(identity, dialog.FileName);
+            await _service.ExportPublicAsync(identity, dialog.FileName, _operationCts!.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
             StatusText.Text = $"✓ Public identity exported. Share {Path.GetFileName(dialog.FileName)} and compare fingerprint {identity.Fingerprint} through an independent channel.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Public identity export cancelled safely. Incomplete temporary output was removed where possible.";
         }
         catch (Exception ex)
         {
             ShowError(ex.Message);
         }
+        finally
+        {
+            EndOperation();
+        }
     }
 
     private void CopyFingerprint_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         if (IdentityList.SelectedItem is not Rice2kIdentity identity)
         {
             ShowError("Select an identity first.");
@@ -175,7 +226,7 @@ public partial class IdentityManagerWindow : Window
 
     private void RemoveIdentity_Click(object sender, RoutedEventArgs e)
     {
-        if (IdentityList.SelectedItem is not Rice2kIdentity identity)
+        if (_busy || IdentityList.SelectedItem is not Rice2kIdentity identity)
             return;
 
         var result = MessageBox.Show(
@@ -190,6 +241,31 @@ public partial class IdentityManagerWindow : Window
         _identities.Remove(identity);
         identity.Dispose();
         StatusText.Text = "Identity removed from memory.";
+    }
+
+    private void BeginOperation(string status)
+    {
+        _operationCts?.Dispose();
+        _operationCts = new CancellationTokenSource();
+        _busy = true;
+        IdentityList.IsEnabled = false;
+        IdentityNameBox.IsEnabled = false;
+        StatusText.Text = status;
+    }
+
+    private void EndOperation()
+    {
+        _busy = false;
+        IdentityList.IsEnabled = true;
+        IdentityNameBox.IsEnabled = true;
+        _operationCts?.Dispose();
+        _operationCts = null;
+
+        if (_closeWhenFinished)
+        {
+            _closeWhenFinished = false;
+            Dispatcher.InvokeAsync(Close);
+        }
     }
 
     private string? PromptForPassword(string title, string guidance, bool confirm)
@@ -245,7 +321,11 @@ public partial class IdentityManagerWindow : Window
         };
 
         if (dialog.ShowDialog() != true)
+        {
+            first.Clear();
+            second.Clear();
             return null;
+        }
 
         var result = first.Password;
         first.Clear();
@@ -257,6 +337,15 @@ public partial class IdentityManagerWindow : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
+        if (_busy)
+        {
+            e.Cancel = true;
+            _closeWhenFinished = true;
+            StatusText.Text = "Cancelling the active identity operation before closing…";
+            _operationCts?.Cancel();
+            return;
+        }
+
         foreach (var identity in _identities)
             identity.Dispose();
         _identities.Clear();
