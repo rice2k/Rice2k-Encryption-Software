@@ -16,6 +16,7 @@ public partial class MainWindow
         InitializeAccessibilityUi();
         InitializeKeyManagerUi();
         InitializeRecoveryUi();
+        InitializeVaultUi();
         InitializeKeyFileProtectionUi();
         InitializeKeyFileResetHooks();
 
