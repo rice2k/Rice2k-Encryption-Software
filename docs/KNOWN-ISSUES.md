@@ -15,19 +15,19 @@ This is the permanent engineering register for errors, bugs, release blockers, a
 |---|---|---|---|---|
 | R2K-VAL-001 | Blocker | Open | pre-0.6 | Complete solution has not yet completed a successful supported Windows + .NET 10 Release build. Step 1 of stabilization is to make this pass and record the result. |
 | R2K-TEST-001 | Blocker | Open | pre-0.6 | Source-controlled security/regression suite has not yet completed a successful supported Windows/.NET 10 run. Tracked in GitHub Issue #6. |
-| R2K-CI-001 | High | Open / infrastructure | 0.6.0-preview.2 | Prior GitHub-hosted validation attempts created jobs but executed zero steps. Automatic push validation is being enabled during stabilization so this can be re-tested. |
-| R2K-UI-001 | Low | Open | 0.6.0-preview.4 stabilization | Legacy `MainWindow.xaml.cs` still contains hard-coded `v0.2-dev` status text after successful operations. Replace with dynamic assembly version/status text. |
-| R2K-UI-002 | Medium | Open | 0.6.0-preview.4 stabilization | Legacy drag/drop messaging still says multi-file/folder queue support is a future milestone even though Batch Queue is implemented. Route the drop to the implemented queue or update the message/behavior. |
+| R2K-CI-001 | High | Open / infrastructure | 0.6.0-preview.2 | Hosted Actions checks continue to fail before executing a step. Automatic push validation produced job `107338276220` for run `35907363363`; the check finished in roughly two seconds, returned an empty step list, and had no downloadable job log. This still does not constitute a compiler result. |
 | R2K-A11Y-001 | Blocker for RC/Stable | Open | 0.6 | Full Windows keyboard-only Encrypt/Decrypt acceptance run has not been performed. |
 | R2K-A11Y-002 | Blocker for RC/Stable | Open | 0.6 | Narrator/screen-reader, text scaling/DPI, multi-monitor, High Contrast and reduced-motion visual acceptance review remains unexecuted on Windows. |
 | R2K-PERF-001 | Blocker for Stable | Open | 0.4 | Multi-gigabyte file/vault performance and memory-use release-gate runs remain unexecuted. |
 | R2K-PKG-001 | Blocker for RC/Stable | Open | pre-1.0 | No signed portable/installer release path has completed packaging, install/uninstall and Authenticode/signature verification tests. Tracked in GitHub Issue #7. |
 | R2K-REVIEW-001 | Blocker for Stable | Open | pre-1.0 | Stable cryptographic/file-format/identity trust design has not had independent security review. |
 
-## Fixed issues
+## Fixed / mitigated issues
 
 | ID | Severity | Fixed in | Description / resolution |
 |---|---|---|---|
+| R2K-UI-001 | Low | 0.6.0-preview.4 stabilization source | Legacy `MainWindow.xaml.cs` contains milestone-era `v0.2-dev` status suffixes. The version-status partial now normalizes those user-visible strings to the actual assembly informational version. Large-file source decomposition/cleanup can happen later without exposing the stale version to users. |
+| R2K-UI-002 | Medium | 0.6.0-preview.4 stabilization source | Replaced user-visible stale drag/drop behavior via a routed `OnDrop` override: one normal file routes to Encrypt, one `.r2kenc` routes to Decrypt, folders/multiple normal files open the implemented Batch Queue, and multiple encrypted containers receive accurate guidance instead of claiming batch support is a future milestone. |
 | R2K-SET-001 | High compile risk | 0.6.0-preview.4 source | Settings XAML exposed `ReduceMotion_Changed` and `ReviewStoredHistory_Click` without corresponding handlers. Added code-behind integration. |
 | R2K-SET-002 | Medium | 0.6.0-preview.4 source | Optional-history checkboxes existed in Settings but were not loaded/persisted by the code-behind. Added explicit settings synchronization and persistence. |
 | R2K-HIST-001 | Privacy | 0.6.0-preview.4 source | Persistent activity needed a privacy-safe storage policy. Added explicit opt-in action-only redaction, bounded storage, review/clear UI and tests. |
@@ -45,4 +45,4 @@ When a bug is found:
 3. Create/link a GitHub Issue for Blocker/High defects or any item requiring multi-step work.
 4. Record whether encrypted/source data can be affected.
 5. Add a regression test when practical before marking the bug fixed.
-6. Move the entry to **Fixed issues** only after the fix exists in source; do not claim runtime validation until the relevant test/build actually runs.
+6. Move the entry to **Fixed / mitigated issues** only after the source change exists; do not claim runtime validation until the relevant test/build actually runs.
