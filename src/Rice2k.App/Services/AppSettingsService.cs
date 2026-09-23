@@ -7,7 +7,9 @@ public sealed record Rice2kAppSettings(
     bool ShowHelpfulHints = true,
     DateTimeOffset? LastRecoveryTestUtc = null,
     string? LastRecoveryFingerprint = null,
-    string? LastRecoveryKeyName = null);
+    string? LastRecoveryKeyName = null,
+    bool VaultAutoLockEnabled = true,
+    int VaultAutoLockMinutes = 10);
 
 public sealed class AppSettingsService
 {
