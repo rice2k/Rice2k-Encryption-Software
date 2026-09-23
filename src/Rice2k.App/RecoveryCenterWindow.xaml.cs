@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -11,6 +12,9 @@ public partial class RecoveryCenterWindow : Window
     private readonly KeyManagerService _keyManager = new();
     private readonly RecoveryPackageService _recovery = new();
     private readonly AppSettingsService _settingsService;
+    private CancellationTokenSource? _operationCts;
+    private bool _busy;
+    private bool _closeWhenFinished;
 
     public RecoveryCenterWindow() : this(new AppSettingsService())
     {
@@ -20,10 +24,14 @@ public partial class RecoveryCenterWindow : Window
     {
         _settingsService = settingsService;
         InitializeComponent();
+        Closing += RecoveryCenterWindow_Closing;
     }
 
     private void BrowseSourceKeyPackage_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         var dialog = new OpenFileDialog
         {
             Title = "Choose the .r2kkey package to back up",
@@ -38,6 +46,9 @@ public partial class RecoveryCenterWindow : Window
 
     private void BrowseRecoveryPackage_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         var dialog = new OpenFileDialog
         {
             Title = "Choose a Rice2k recovery package",
@@ -56,35 +67,47 @@ public partial class RecoveryCenterWindow : Window
 
     private async void CreateRecoveryPackage_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy)
+            return;
+
         if (!File.Exists(SourceKeyPackageBox.Text))
         {
             ShowError("Choose an existing .r2kkey package first.");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(SourceKeyPasswordBox.Password))
+        var sourcePassword = SourceKeyPasswordBox.Password;
+        var recoveryPassword = RecoveryPasswordBox.Password;
+        var recoveryConfirmation = RecoveryConfirmPasswordBox.Password;
+
+        if (string.IsNullOrWhiteSpace(sourcePassword))
         {
             ShowError("Enter the current password for the .r2kkey package.");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(RecoveryPasswordBox.Password) || RecoveryPasswordBox.Password.Length < 12)
+        if (string.IsNullOrWhiteSpace(recoveryPassword) || recoveryPassword.Length < 12)
         {
             ShowError("Use a recovery password of at least 12 characters. A longer unique password is recommended.");
             return;
         }
 
-        if (!string.Equals(RecoveryPasswordBox.Password, RecoveryConfirmPasswordBox.Password, StringComparison.Ordinal))
+        if (!string.Equals(recoveryPassword, recoveryConfirmation, StringComparison.Ordinal))
         {
             ShowError("The recovery password and confirmation do not match.");
             return;
         }
 
+        SourceKeyPasswordBox.Clear();
+        RecoveryPasswordBox.Clear();
+        RecoveryConfirmPasswordBox.Clear();
+        BeginOperation("Authenticating the source key package…");
+
         ManagedKey? key = null;
         try
         {
-            RecoveryStatusText.Text = "Authenticating the source key package…";
-            key = await _keyManager.ImportAsync(SourceKeyPackageBox.Text, SourceKeyPasswordBox.Password);
+            key = await _keyManager.ImportAsync(SourceKeyPackageBox.Text, sourcePassword, _operationCts!.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
 
             var dialog = new SaveFileDialog
             {
@@ -102,13 +125,19 @@ public partial class RecoveryCenterWindow : Window
                 return;
             }
 
+            _operationCts.Token.ThrowIfCancellationRequested();
             RecoveryStatusText.Text = "Creating authenticated recovery package…";
-            await _recovery.CreateAsync(key, dialog.FileName, RecoveryPasswordBox.Password);
+            await _recovery.CreateAsync(key, dialog.FileName, recoveryPassword, _operationCts.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
 
             TestRecoveryPackageBox.Text = dialog.FileName;
             RecoveryTestStatusText.Text = "Recovery package created. Test it now before storing it.";
             RecoveryFingerprintBox.Text = key.Fingerprint;
             RecoveryStatusText.Text = $"✓ Recovery package created for {key.Name}. Recommended next step: Test Recovery using the recovery password.";
+        }
+        catch (OperationCanceledException)
+        {
+            RecoveryStatusText.Text = "Recovery package operation cancelled safely. No incomplete package is intentionally retained.";
         }
         catch (Exception ex)
         {
@@ -118,28 +147,41 @@ public partial class RecoveryCenterWindow : Window
         finally
         {
             key?.Dispose();
+            sourcePassword = string.Empty;
+            recoveryPassword = string.Empty;
+            recoveryConfirmation = string.Empty;
             SourceKeyPasswordBox.Clear();
             RecoveryPasswordBox.Clear();
             RecoveryConfirmPasswordBox.Clear();
+            EndOperation();
         }
     }
 
     private async void TestRecovery_Click(object sender, RoutedEventArgs e)
     {
-        if (!ValidateRecoveryTestInputs())
+        if (_busy || !ValidateRecoveryTestInputs())
             return;
+
+        var recoveryPassword = TestRecoveryPasswordBox.Password;
+        TestRecoveryPasswordBox.Clear();
+        BeginOperation("Testing authentication and key recovery…");
 
         ManagedKey? recovered = null;
         try
         {
-            RecoveryTestStatusText.Text = "Testing authentication and key recovery…";
             RecoveryFingerprintBox.Clear();
-            recovered = await _recovery.OpenAsync(TestRecoveryPackageBox.Text, TestRecoveryPasswordBox.Password);
+            recovered = await _recovery.OpenAsync(TestRecoveryPackageBox.Text, recoveryPassword, _operationCts!.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
 
             RecoveryFingerprintBox.Text = recovered.Fingerprint;
             RecoveryTestStatusText.Text = $"✓ Recovery test passed for '{recovered.Name}'. The package authenticated and contains a valid 256-bit key.";
             RecoveryStatusText.Text = "✓ Test passed. Compare this fingerprint with the original key's fingerprint when available.";
             RecordSuccessfulRecoveryTest(recovered);
+        }
+        catch (OperationCanceledException)
+        {
+            RecoveryTestStatusText.Text = "Recovery test cancelled. No recovered key was retained.";
+            RecoveryFingerprintBox.Clear();
         }
         catch (Exception ex)
         {
@@ -150,24 +192,30 @@ public partial class RecoveryCenterWindow : Window
         finally
         {
             recovered?.Dispose();
+            recoveryPassword = string.Empty;
             TestRecoveryPasswordBox.Clear();
+            EndOperation();
         }
     }
 
     private async void RestoreKeyPackage_Click(object sender, RoutedEventArgs e)
     {
-        if (!ValidateRecoveryTestInputs())
+        if (_busy || !ValidateRecoveryTestInputs())
             return;
 
         var newPassword = PromptForNewPackagePassword();
         if (newPassword is null)
             return;
 
+        var recoveryPassword = TestRecoveryPasswordBox.Password;
+        TestRecoveryPasswordBox.Clear();
+        BeginOperation("Authenticating recovery package…");
+
         ManagedKey? recovered = null;
         try
         {
-            RecoveryStatusText.Text = "Authenticating recovery package…";
-            recovered = await _recovery.OpenAsync(TestRecoveryPackageBox.Text, TestRecoveryPasswordBox.Password);
+            recovered = await _recovery.OpenAsync(TestRecoveryPackageBox.Text, recoveryPassword, _operationCts!.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
 
             var dialog = new SaveFileDialog
             {
@@ -185,11 +233,18 @@ public partial class RecoveryCenterWindow : Window
                 return;
             }
 
-            await _keyManager.ExportAsync(recovered, dialog.FileName, newPassword);
+            _operationCts.Token.ThrowIfCancellationRequested();
+            await _keyManager.ExportAsync(recovered, dialog.FileName, newPassword, _operationCts.Token);
+            _operationCts.Token.ThrowIfCancellationRequested();
+
             RecoveryFingerprintBox.Text = recovered.Fingerprint;
             RecoveryTestStatusText.Text = $"✓ Restored a new .r2kkey package for '{recovered.Name}'.";
             RecoveryStatusText.Text = $"✓ Restore complete. Fingerprint: {recovered.Fingerprint}";
             RecordSuccessfulRecoveryTest(recovered);
+        }
+        catch (OperationCanceledException)
+        {
+            RecoveryStatusText.Text = "Restore cancelled safely. Existing recovery data was not modified.";
         }
         catch (Exception ex)
         {
@@ -199,7 +254,10 @@ public partial class RecoveryCenterWindow : Window
         finally
         {
             recovered?.Dispose();
+            recoveryPassword = string.Empty;
+            newPassword = string.Empty;
             TestRecoveryPasswordBox.Clear();
+            EndOperation();
         }
     }
 
@@ -229,6 +287,43 @@ public partial class RecoveryCenterWindow : Window
         }
 
         return true;
+    }
+
+    private void BeginOperation(string status)
+    {
+        _operationCts?.Dispose();
+        _operationCts = new CancellationTokenSource();
+        _busy = true;
+        RecoveryStatusText.Text = status;
+    }
+
+    private void EndOperation()
+    {
+        _busy = false;
+        _operationCts?.Dispose();
+        _operationCts = null;
+
+        if (_closeWhenFinished)
+        {
+            _closeWhenFinished = false;
+            Dispatcher.InvokeAsync(Close);
+        }
+    }
+
+    private void RecoveryCenterWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        SourceKeyPasswordBox.Clear();
+        RecoveryPasswordBox.Clear();
+        RecoveryConfirmPasswordBox.Clear();
+        TestRecoveryPasswordBox.Clear();
+
+        if (!_busy)
+            return;
+
+        e.Cancel = true;
+        _closeWhenFinished = true;
+        RecoveryStatusText.Text = "Cancelling the active recovery operation before closing…";
+        _operationCts?.Cancel();
     }
 
     private string? PromptForNewPackagePassword()
@@ -280,7 +375,11 @@ public partial class RecoveryCenterWindow : Window
 
         var result = dialog.ShowDialog();
         if (result != true)
+        {
+            first.Clear();
+            confirm.Clear();
             return null;
+        }
 
         var password = first.Password;
         first.Clear();
