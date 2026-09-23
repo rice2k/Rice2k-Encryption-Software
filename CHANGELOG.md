@@ -20,12 +20,19 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Dedicated completion screens with output path and Open Folder actions.
 - Preflight checks for source readability, source/destination conflicts, destination availability, and free disk space when available.
 - Automatic non-overwriting Keep Both naming for output collisions.
+- User-facing Batch Queue accessible from the sidebar and Command Center.
+- Multi-select and drag-and-drop batch file intake.
+- Per-file batch status/progress plus overall queue progress.
+- Sequential batch encryption using the same authenticated `.r2kenc` engine.
+- Batch failure isolation: one failed item does not discard successful outputs or stop later items.
+- Safe batch cancellation that keeps completed outputs and cleans the active temporary file.
 
 ### Changed
 
 - Windows application development version advanced to `0.2.0-preview.1`.
 - Encrypt/Decrypt screens now hide cryptographic details behind recommended defaults instead of exposing them as required choices.
 - Operation failures return users to a recoverable workflow step with plain-English guidance.
+- Dropping multiple normal files onto the main window routes them to the Batch Queue.
 
 ### Security
 
@@ -35,3 +42,4 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Existing destination files are never overwritten automatically.
 - Cancelled encryption/decryption removes incomplete temporary output.
 - Encryption now requires password confirmation before an operation can begin.
+- Batch encryption performs preflight checks per item and preserves completed outputs if later items fail or are cancelled.
