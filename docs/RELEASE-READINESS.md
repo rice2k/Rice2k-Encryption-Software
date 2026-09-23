@@ -10,7 +10,7 @@ During stabilization, new major features should not be added unless they are req
 
 ## Beta readiness checklist
 
-### 1. Build the complete solution on Windows + .NET 10 — **BLOCKED ON RUNNER / LOCAL WINDOWS VALIDATION AVAILABLE**
+### 1. Build the complete solution on Windows + .NET 10 — **BLOCKED ON HOSTED RUNNER / LOCAL WINDOWS VALIDATION AVAILABLE**
 
 Recommended command:
 
@@ -18,7 +18,7 @@ Recommended command:
 PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1
 ```
 
-The validator runs the equivalent of:
+The validator now runs a static WPF preflight first, followed by the equivalent of:
 
 ```powershell
 dotnet --info
@@ -28,6 +28,7 @@ dotnet test tests\Rice2k.Tests\Rice2k.Tests.csproj --configuration Release --no-
 ```
 
 Pass criteria:
+- static WPF XAML/partial-class preflight succeeds;
 - the pinned .NET 10 SDK environment is recorded;
 - `dotnet restore` succeeds;
 - Release build succeeds for the complete solution;
@@ -35,7 +36,9 @@ Pass criteria:
 - warnings are reviewed and security/data-safety-relevant warnings are fixed before Beta;
 - exact SDK/runtime and build result are recorded below.
 
-Current result: **Not passed yet.** Automatic GitHub validation now triggers on pushes to `main`, but observed jobs still report `runner_id: 0`, empty runner name/group, `steps: []`, and no downloadable step log. This is `R2K-CI-001`, not a compiler result.
+Current result: **Not passed yet.** A temporary two-platform hosted-runner probe demonstrated that both `ubuntu-latest` and `windows-latest` jobs can be created but fail before any step executes, with no logs. This confirms `R2K-CI-001` is broader hosted-runner availability for this repository/account, not a Windows image or Rice2k compiler result.
+
+During the static stabilization sweep, a genuine compile blocker was found and fixed: duplicate `SettingsSearchPanel` partial members in `SettingsSearchPanel.PrivacyHistory.cs` and `SettingsSearchPanel.PrivacyExtras.cs`. The obsolete duplicate partial was removed and the fix is recorded as `R2K-SET-004`.
 
 ### 2. Execute the complete automated security/regression suite — **NOT STARTED AS A VALIDATED RUN**
 
@@ -87,6 +90,8 @@ Append each attempted validation; do not erase failures.
 | 2026-09-23 | 0.6.0-preview.4 | Current ChatGPT working container | SDK availability | Blocked | `dotnet` SDK is not installed and outbound DNS/download is unavailable in the working container, so it cannot be converted into the supported Windows build environment. |
 | 2026-09-23 | commit `3d4764f0e2b623c18e6855be755b8940f0a702e6` | GitHub Actions `windows-latest` | Automatic push validation | Failed before execution | Run `35907363363`, job `107338276220`; job completed in ~2 seconds with zero steps and no runner execution. |
 | 2026-09-23 | commit `1e3853afd5062842da77595b07f7c12e70080061` | GitHub Actions `windows-latest` | Automatic push validation | Failed before execution | Run `35907842065`, job `107339876446`; `runner_id: 0`, empty runner name/group, `steps: []`; no compiler/test result. |
+| 2026-09-23 | commit `09e73f7629349fd7ada88a716def989b3ecd13cc` | GitHub Actions `windows-latest` | Automatic push validation | Failed before execution | Run `35912484001`, job `107355544383`; no logs or executed steps. |
+| 2026-09-23 | commit `7038c5956e0fb9c7e48c7652e6b53afeff5215b6` | GitHub Actions `ubuntu-latest` + `windows-latest` | Cross-platform hosted-runner probe | Failed before execution on both | Run `35913172673`; Ubuntu job `107357889592` and Windows job `107357889952` both returned no logs and no steps. This isolates the blocker to hosted-runner availability rather than Windows-only capacity/image behavior. |
 
 ## Local validation artifact policy
 
@@ -96,7 +101,7 @@ Append each attempted validation; do not erase failures.
 artifacts\validation\<timestamp>\
 ```
 
-Each attempt gets separate SDK/restore/build/test logs and `VALIDATION-SUMMARY.md`. `artifacts/` is git-ignored by default. Successful and failed attempts should be summarized back into this table when they are used as release evidence.
+Each attempt gets the static WPF preflight result plus separate SDK/restore/build/test logs and `VALIDATION-SUMMARY.md`. `artifacts/` is git-ignored by default. Successful and failed attempts should be summarized back into this table when they are used as release evidence.
 
 ## Bug/release records
 
