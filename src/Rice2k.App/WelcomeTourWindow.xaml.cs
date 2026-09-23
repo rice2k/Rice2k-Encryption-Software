@@ -25,8 +25,8 @@ public partial class WelcomeTourWindow : Window
         new(
             "Passwords matter",
             "A lost password can mean lost access",
-            "Rice2k uses Argon2id to derive the encryption key from your password, but it cannot recover a password you forget. Use a long unique password or let Rice2k generate one, then store it somewhere you trust.",
-            "Password recovery and recovery packages are separate planned features; they cannot magically recover an unknown encryption password."),
+            "Rice2k uses Argon2id to derive encryption keys from passwords, but it cannot recover a password you forget. Use a long unique password or let Rice2k generate one, then store it somewhere you trust.",
+            "Recovery Center can create and test separate .r2krecovery backups for Rice2k key packages, but recovery packages cannot bypass an unknown file, key-package, vault, identity, or recovery password."),
         new(
             "Files, folders, and batches",
             "Use the Batch Queue for larger jobs",
@@ -72,7 +72,17 @@ public partial class WelcomeTourWindow : Window
     private void CompleteTour()
     {
         var current = _settingsService.Load();
-        _settingsService.TrySave(current with { FirstRunTourCompleted = true });
+        var saved = _settingsService.TrySave(current with { FirstRunTourCompleted = true });
+        if (!saved)
+        {
+            MessageBox.Show(
+                this,
+                "Rice2k could not save the first-run completion setting. You can continue using Rice2k, but this welcome tour may appear again the next time the application starts.",
+                "Welcome setting was not saved",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+
         DialogResult = true;
     }
 
