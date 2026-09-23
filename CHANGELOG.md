@@ -40,18 +40,26 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - **Key Manager** for generating in-memory 256-bit symmetric keys with human-readable fingerprints.
 - Password-protected authenticated `.r2kkey` export and import.
 - Duplicate-key detection by key identity/fingerprint within a Key Manager session.
+- **Password + Rice2k key-file protection** in the normal Encrypt/Decrypt workflow.
+- `R2KENC02` v2 containers requiring both a file password and the matching 256-bit key from an encrypted `.r2kkey` package.
+- Automatic v2 detection in the Decrypt workflow with the required non-secret key fingerprint shown to the user.
+- Password-derived and key-file secret combination using Argon2id plus domain-separated HMAC-SHA-256 before XChaCha20-Poly1305 content encryption.
+- Pause/resume, cancellation cleanup, output verification, and progress reporting for password + key-file operations.
 - **Recovery Center** for creating separately password-protected `.r2krecovery` packages from `.r2kkey` packages.
 - Test Recovery workflow that authenticates/decrypts in memory, validates the 256-bit key, displays only the safe fingerprint, and then clears recovered key bytes.
 - Restore workflow that creates a fresh password-protected `.r2kkey` from a valid recovery package.
 - Command Center recovery-health status based on the last successful local recovery test.
-- Development format documentation for `.r2kkey` and `.r2krecovery`.
+- Development format documentation for `.r2kkey`, `.r2krecovery`, and both `.r2kenc` container variants.
 - xUnit v3 security/regression test project included in the solution.
 - Key/recovery tests covering package round trips, wrong passwords, tampering, recovery validation, and restored fingerprint preservation.
+- Password + key-file tests covering round trips, wrong-key rejection, wrong-password rejection, tampering, cancellation cleanup, fingerprint inspection, and v1 compatibility detection.
 
 ### Changed
 
 - Windows application development version advanced to `0.3.0-preview.1`.
 - Encrypt/Decrypt screens hide cryptographic details behind recommended defaults instead of exposing them as required choices.
+- Encrypt now offers **Password only** and **Password + Rice2k key file** without changing existing password-only files.
+- Decrypt automatically distinguishes password-only `R2KENC01` containers from password + key-file `R2KENC02` containers.
 - Operation failures return users to a recoverable workflow step with plain-English guidance.
 - Dropping multiple normal files or a folder onto the main window routes them to the Batch Queue.
 - Passwords & Keys now exposes the operational Key Manager instead of only the password generator.
@@ -67,12 +75,16 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Cancelled encryption/decryption removes incomplete temporary output.
 - Encryption requires password confirmation before an operation can begin.
 - Batch encryption performs preflight checks per item and preserves completed outputs if later items fail or are cancelled.
-- `.r2kenc` parser caps unauthenticated KDF, chunk-size, and metadata-length values before expensive resource use.
+- `.r2kenc` parsers cap unauthenticated KDF, chunk-size, metadata-length, and v2 fingerprint-length values before expensive resource use.
 - Authenticated metadata is validated for internal consistency before decryption continues.
+- v2 key-file containers bind the required key fingerprint into authenticated metadata/header associated data.
+- The public v2 fingerprint is treated only as a selection hint until authenticated metadata is successfully opened.
+- Password + key-file encryption fails closed unless both the password-derived key and matching key-file secret are present.
 - Text tokens validate size, salt, nonce, and ciphertext structure before decryption.
 - `.r2kkey` and `.r2krecovery` package parsers bound KDF and ciphertext parameters before expensive work.
 - Key/recovery packages authenticate both encrypted payloads and security-relevant header parameters.
 - Raw symmetric key bytes are not displayed in the normal user interface.
 - In-memory managed keys are cleared when removed or when the Key Manager closes.
+- Workflow copies of key-file secrets and derived keys are cleared on a best-effort basis after use.
 - Recovery tests clear the temporary recovered key after fingerprint verification.
-- Security tests cover round trips, wrong passwords, tampering, truncation, resource-limit rejection, overwrite protection, password policy, cancellation cleanup, key packages, and recovery packages.
+- Security tests cover round trips, wrong passwords, wrong keys, tampering, truncation, resource-limit rejection, overwrite protection, password policy, cancellation cleanup, key packages, key-file containers, and recovery packages.
