@@ -34,6 +34,7 @@ function Get-CanonicalParameterSignature {
     $bracketDepth = 0
 
     foreach ($ch in $Parameters.ToCharArray()) {
+        $appendCharacter = $true
         switch ($ch) {
             '<' { $angleDepth++ }
             '>' { if ($angleDepth -gt 0) { $angleDepth-- } }
@@ -45,12 +46,14 @@ function Get-CanonicalParameterSignature {
                 if ($angleDepth -eq 0 -and $parenDepth -eq 0 -and $bracketDepth -eq 0) {
                     $parts.Add($builder.ToString())
                     [void]$builder.Clear()
-                    continue
+                    $appendCharacter = $false
                 }
             }
         }
 
-        [void]$builder.Append($ch)
+        if ($appendCharacter) {
+            [void]$builder.Append($ch)
+        }
     }
 
     if ($builder.Length -gt 0) {
