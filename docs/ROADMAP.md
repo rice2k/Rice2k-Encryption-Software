@@ -71,25 +71,41 @@ This document tracks implementation status and the remaining release gates. A ch
 - [x] Verify finalized vault before releasing recovery backup
 - [x] Verify / restore / move-aside recovery-backup controls
 - [x] Preserve the newer active vault as a pre-recovery copy during manual backup restoration
+- [x] Detect and review interrupted `.pending` vault-save artifacts
+- [x] Verify interrupted pending saves cryptographically before preserving them separately
 - [x] Detailed vault operation progress: stage, percent, bytes, rate, elapsed time, ETA, and current item
 - [x] Safe cancellation for progress-aware add/extract/rename/remove/verify operations
 - [x] Lock/close race guards during active vault operations
 - [x] Source-controlled vault fault-injection checkpoints around pending verification and atomic replacement
 - [x] Source-controlled vault fault-injection and progress/cancellation tests
+- [x] Dedicated one-click **Protect Folder** workflow outside the Vault Browser using `.r2kvault`
+- [x] Repeatable local vault benchmark/correctness harness
 - [ ] Execute fault-injection tests on Windows/.NET 10
 - [ ] Large-vault performance profiling and multi-gigabyte release-gate runs
-- [ ] Dedicated one-click folder-container workflow outside the Vault Browser
 - [ ] Evaluate optional vault size-hiding/padding without making misleading privacy claims
-- [ ] Full Vault Browser accessibility review
+- [ ] Full Vault Browser accessibility/high-contrast/scaling review
 
 ## Milestone 0.5 — Identity and sharing
 
-- [ ] Public/private key identities
-- [ ] Encrypt for recipient
-- [ ] Multi-recipient encrypted packages
-- [ ] Detached digital signatures `.r2ksig`
-- [ ] Signature verification
-- [ ] Trust/fingerprint comparison UX
+- [x] Public/private Rice2k identities
+- [x] Password-protected private identity package `.r2kid`
+- [x] Self-signed shareable public identity card `.r2kpub`
+- [x] Human-readable combined-key fingerprints
+- [x] Public-card self-signature and fingerprint validation
+- [x] Reusable local public-identity contact book
+- [x] Revalidate saved public cards when contacts are loaded
+- [x] Contact trust UX that distinguishes key self-authentication from real-world identity verification
+- [x] Encrypt for one recipient (`R2KENC03`)
+- [x] Multi-recipient encrypted packages
+- [x] Sealed-box content-key wrapping with authenticated chunked file encryption
+- [x] Recipient decryption with encrypted `.r2kid` private identity
+- [x] Detached digital signatures `.r2ksig`
+- [x] Ed25519 signature verification plus SHA-512 file-match verification
+- [x] Optional expected-public-identity comparison during signature verification
+- [x] Clear UI distinction between confidentiality (encryption) and authenticity (signatures)
+- [x] Source-controlled identity, recipient-encryption, signature, and contact validation tests
+- [ ] Execute the full v0.5 regression suite on a supported Windows/.NET 10 runner
+- [ ] Independent review of the pre-1.0 identity/sharing protocol and trust wording
 
 ## Milestone 0.6 — Privacy and operational polish
 
@@ -119,12 +135,13 @@ A 1.0 release should not be published until:
 
 1. The complete solution builds cleanly on the supported Windows/.NET 10 toolchain.
 2. All source-controlled unit/security/regression tests execute successfully.
-3. File, text, key, recovery, key-file, and vault round-trip tests cover supported formats.
-4. Corruption, wrong-password, wrong-key, truncation, malformed-header, reordered/missing-chunk, and hostile-resource-parameter tests fail safely.
+3. File, text, key, recovery, key-file, vault, identity, recipient-encryption, and signature round-trip tests cover supported formats.
+4. Corruption, wrong-password, wrong-key, wrong-recipient, invalid-signature, truncation, malformed-header, reordered/missing-chunk, and hostile-resource-parameter tests fail safely.
 5. Large-file and large-vault tests cover multi-gigabyte data without loading entire files into memory.
 6. Crash/interruption and fault-injection tests confirm original source data and the last known-good vault state are preserved.
 7. Accessibility and keyboard navigation have been reviewed on Windows with scaling and high-contrast scenarios.
 8. Release builds are signed and the update path verifies signatures.
-9. Stable file formats and cryptographic choices have had independent review.
+9. Stable file formats, identity trust semantics, and cryptographic choices have had independent review.
 10. Recovery documentation and workflows have been tested by someone other than the developer.
 11. A stable release is not advertised as capable of recovering forgotten passwords or keys when no valid recovery material exists.
+12. A stable release does not imply that a self-signed public identity label proves a real-world identity unless its fingerprint has been independently verified.
