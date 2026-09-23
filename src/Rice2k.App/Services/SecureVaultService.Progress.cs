@@ -271,7 +271,9 @@ public sealed partial class SecureVaultService
             if (File.Exists(destinationPath))
                 throw new IOException("A file appeared at the selected restore path before Rice2k could finalize the restored file.");
             File.Move(tempPath, destinationPath);
-            ReportVaultProgress(progress, "Restore complete", entry.Length, Math.Max(entry.Length, 1), 1, 1, entry.Path);
+
+            var completed = entry.Length == 0 ? 1 : entry.Length;
+            ReportVaultProgress(progress, "Restore complete", completed, completed, 1, 1, entry.Path);
         }
         catch
         {
@@ -438,10 +440,10 @@ public sealed partial class SecureVaultService
                     cancellationToken.ThrowIfCancellationRequested();
                     var baseProtected = protectedBytes;
                     await WriteEntryRecordWithProgressAsync(
-                        output,
                         writer,
                         currentState.Header,
                         addition,
+                        key,
                         current => ReportVaultProgress(
                             progress,
                             "Encrypting new vault data",
@@ -518,10 +520,10 @@ public sealed partial class SecureVaultService
     }
 
     private static async Task WriteEntryRecordWithProgressAsync(
-        Stream output,
         BinaryWriter writer,
         VaultHeader header,
         PendingVaultAddition addition,
+        byte[] key,
         Action<long> report,
         CancellationToken cancellationToken)
     {
@@ -561,18 +563,31 @@ public sealed partial class SecureVaultService
                     break;
 
                 var plain = buffer.AsSpan(0, read).ToArray();
+                byte[]? cipher = null;
                 try
                 {
                     var nonce = SecretAeadXChaCha20Poly1305.GenerateNonce();
-                    var cipher = SecretAeadXChaCha20Poly1305.Encrypt(
+                    cipher = SecretAeadXChaCha20Poly1305.Encrypt(
                         plain,
                         nonce,
-                        key: additionKeyNotUsedHere,
-                        additionalData: []);
+                        key,
+                        BuildChunkAad(header.HeaderAuthenticationData, addition.Entry.Id, chunkIndex));
+
+                    writer.Write(chunkIndex);
+                    writer.Write(cipher.Length);
+                    writer.Write(nonce);
+                    writer.Write(cipher);
+                    writer.Flush();
+
+                    totalRead += read;
+                    chunkIndex++;
+                    report(totalRead);
                 }
                 finally
                 {
                     CryptographicOperations.ZeroMemory(plain);
+                    if (cipher is not null)
+                        CryptographicOperations.ZeroMemory(cipher);
                 }
             }
         }
@@ -580,6 +595,12 @@ public sealed partial class SecureVaultService
         {
             CryptographicOperations.ZeroMemory(buffer);
         }
+
+        if (totalRead != sourceInfo.Length || chunkIndex != chunkCount)
+            throw new IOException($"'{sourceInfo.Name}' changed while Rice2k was reading it. The pending vault will be discarded.");
+
+        if (sourceInfo.Length == 0)
+            report(0);
     }
 
     private static async Task CopyRangeWithProgressAsync(
@@ -649,7 +670,12 @@ public sealed partial class SecureVaultService
         public override bool CanSeek => false;
         public override bool CanWrite => true;
         public override long Length => _written;
-        public override long Position { get => _written; set => throw new NotSupportedException(); }
+        public override long Position
+        {
+            get => _written;
+            set => throw new NotSupportedException();
+        }
+
         public override void Flush() => _inner.Flush();
         public override Task FlushAsync(CancellationToken cancellationToken) => _inner.FlushAsync(cancellationToken);
         public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
