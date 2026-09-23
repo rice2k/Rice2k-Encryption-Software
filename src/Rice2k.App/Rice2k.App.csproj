@@ -10,7 +10,7 @@
     <AssemblyName>Rice2kEncryption</AssemblyName>
     <RootNamespace>Rice2k.Encryption</RootNamespace>
     <ApplicationIcon Condition="Exists('Assets\\Rice2k.ico')">Assets\Rice2k.ico</ApplicationIcon>
-    <Version>0.4.0-preview.2</Version>
+    <Version>0.5.0-preview.1</Version>
     <Authors>Christopher Schumacher / Rice2k</Authors>
     <Product>Rice2k Encryption Software</Product>
     <Description>Modern, user-friendly Windows encryption software.</Description>
