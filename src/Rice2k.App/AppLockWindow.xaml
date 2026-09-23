@@ -2,6 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Rice2k Encryption Software — Locked"
+        AutomationProperties.Name="Rice2k Encryption Software locked"
+        AutomationProperties.HelpText="Enter the configured App Lock password to return to Rice2k, or exit the application."
         Width="560" Height="420"
         MinWidth="520" MinHeight="390"
         ResizeMode="NoResize"
@@ -17,10 +19,11 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,10,0,24">
-            <TextBlock Text="🔐" FontSize="44" HorizontalAlignment="Center" />
+            <TextBlock Text="🔐" FontSize="44" HorizontalAlignment="Center" AutomationProperties.Name="Locked" />
             <TextBlock Text="Rice2k is locked" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,8,0,0" />
             <TextBlock x:Name="ReasonText"
                        Text="Enter your app-lock password to continue."
+                       AutomationProperties.Name="Lock reason"
                        Foreground="{StaticResource MutedTextBrush}"
                        TextAlignment="Center"
                        TextWrapping="Wrap"
@@ -33,17 +36,27 @@
                 <Label Content="App-lock password" />
                 <PasswordBox x:Name="PasswordBox"
                              AutomationProperties.Name="Rice2k app-lock password"
+                             AutomationProperties.HelpText="Enter the password configured in Rice2k Privacy settings."
                              ToolTip="Enter the password configured for Rice2k application locking"
                              KeyDown="PasswordBox_KeyDown" />
                 <TextBlock x:Name="StatusText"
                            Text="Your encryption files and vaults use their own independent passwords and keys."
+                           AutomationProperties.Name="App Lock status"
+                           AutomationProperties.LiveSetting="Polite"
                            Foreground="{StaticResource MutedTextBrush}"
                            TextWrapping="Wrap"
                            FontSize="12"
                            Margin="0,8,0,0" />
-                <ProgressBar x:Name="BusyProgress" Height="8" Margin="0,12,0,0" IsIndeterminate="True" Visibility="Collapsed" />
+                <ProgressBar x:Name="BusyProgress"
+                             Height="8"
+                             Margin="0,12,0,0"
+                             IsIndeterminate="True"
+                             Visibility="Collapsed"
+                             AutomationProperties.Name="Verifying app-lock password" />
                 <Button x:Name="UnlockButton"
                         Content="Unlock Rice2k"
+                        AutomationProperties.Name="Unlock Rice2k"
+                        AutomationProperties.HelpText="Verify the entered App Lock password and restore the Rice2k interface."
                         Click="Unlock_Click"
                         IsDefault="True"
                         MinWidth="160"
@@ -61,6 +74,8 @@
                        VerticalAlignment="Center" />
             <Button Grid.Column="1"
                     Content="Exit Rice2k"
+                    AutomationProperties.Name="Exit Rice2k"
+                    AutomationProperties.HelpText="Close Rice2k without unlocking it."
                     Click="Exit_Click"
                     Style="{StaticResource SecondaryButtonStyle}"
                     Margin="18,0,0,0" />
