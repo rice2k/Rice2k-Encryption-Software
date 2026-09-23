@@ -6,9 +6,11 @@ Rice2k Encryption Software is a Windows WPF application targeting **.NET 10**.
 
 On Windows, install:
 
-- .NET 10 SDK
-- A current Visual Studio installation with the **.NET desktop development** workload, or another editor plus the .NET 10 SDK
-- Git (optional if downloading the repository as a ZIP)
+- the .NET 10 SDK selected by `global.json`;
+- a current Visual Studio installation with the **.NET desktop development** workload, or another editor plus the .NET 10 SDK;
+- Git (optional if downloading the repository as a ZIP).
+
+The repository currently pins SDK feature band **10.0.401** with `latestPatch` roll-forward so validation is reproducible while still allowing later servicing patches in that feature band.
 
 ## Clone
 
@@ -17,39 +19,49 @@ git clone https://github.com/rice2k/Rice2k-Encryption-Software.git
 cd Rice2k-Encryption-Software
 ```
 
-## Restore and build
+## Recommended stabilization validation
+
+For Beta/readiness work, run the repository validator from PowerShell:
 
 ```powershell
-dotnet restore Rice2kEncryption.sln
-dotnet build Rice2kEncryption.sln --configuration Release
+PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1
 ```
 
-## Run security tests
+It records:
+
+- `dotnet --info`;
+- complete solution restore output;
+- Release build output;
+- security/regression test output and TRX results;
+- exact exit codes;
+- application version and Git commit when available;
+- a Markdown validation summary.
+
+Results are written to:
+
+```text
+artifacts\validation\<timestamp>\
+```
+
+`artifacts/` is ignored by Git so local validation logs are not accidentally committed. A failed build/test attempt remains visible in the generated report rather than being rewritten as a pass.
+
+## Restore and build manually
+
+```powershell
+dotnet --info
+dotnet restore Rice2kEncryption.sln
+dotnet build Rice2kEncryption.sln --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+```
+
+## Run security tests manually
 
 The solution includes `tests/Rice2k.Tests`, an xUnit v3 test project targeting the same Windows/.NET generation as the application.
 
-Run all tests:
-
 ```powershell
-dotnet test .\tests\Rice2k.Tests\Rice2k.Tests.csproj --configuration Release
+dotnet test .\tests\Rice2k.Tests\Rice2k.Tests.csproj --configuration Release --no-build
 ```
 
-Current automated coverage includes:
-
-- encrypted-text round trips;
-- fresh salt/nonce behavior;
-- wrong-password failure;
-- text-token tamper and malformed-field rejection;
-- empty, normal, and multi-chunk file round trips;
-- source preservation;
-- file wrong-password failure;
-- ciphertext tamper detection;
-- truncated-container rejection;
-- destination overwrite prevention;
-- service-level password validation;
-- cancelled-operation temporary-file cleanup.
-
-Security-sensitive changes should add or update tests rather than relying only on manual UI testing.
+Current source-controlled coverage includes file/text/key/recovery/vault/identity/recipient/signature/privacy and App Lock regression scenarios. Security-sensitive changes should add or update tests rather than relying only on manual UI testing.
 
 ## Run from source
 
@@ -68,9 +80,10 @@ dotnet run --project .\src\Rice2k.App\Rice2k.App.csproj
 
 ## Current external packages
 
-The development build uses:
+The development build uses, among other dependencies:
 
 - `Sodium.Core` for libsodium-compatible cryptographic primitives;
+- `Microsoft.Win32.SystemEvents` for Windows session-lock integration;
 - `xunit.v3` for automated security/regression tests;
 - `xunit.runner.visualstudio` for Visual Studio/VSTest integration;
 - `Microsoft.NET.Test.Sdk` for test discovery/execution tooling.
@@ -79,8 +92,15 @@ The development build uses:
 
 The project is under active development. Keep independent backups of important files and test decryption before relying on any pre-1.0 build for real data.
 
-## CI note
+## CI status
 
-A manual GitHub Actions validation workflow is included at `.github/workflows/build.yml`. It restores the solution, builds a Release configuration, executes the security test project on Windows, and uploads TRX test results when a hosted runner is available.
+`.github/workflows/build.yml` now validates pushes and pull requests to `main` and also supports manual dispatch. It requests `windows-latest`, installs the SDK from `global.json`, restores the complete solution, builds Release, runs the security/regression project, and uploads TRX results.
 
-At initial project setup, GitHub-hosted runners were terminating before any runner was assigned (`runner_id: 0`, zero executed steps), so automatic push-triggered builds remain disabled to avoid presenting infrastructure failures as source-code failures. The workflow can be manually dispatched once GitHub provides a hosted runner for the repository.
+As of the current stabilization attempt, GitHub creates the validation check but does not assign a hosted runner: observed jobs report `runner_id: 0`, an empty runner name/group, zero executed steps, and no job log. This is tracked as `R2K-CI-001` in `docs/KNOWN-ISSUES.md` and is **not** being treated as a compiler/test failure.
+
+See also:
+
+- [`RELEASE-READINESS.md`](RELEASE-READINESS.md)
+- [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)
+- [`RELEASE-HISTORY.md`](RELEASE-HISTORY.md)
+- [`RELEASE-PROCESS.md`](RELEASE-PROCESS.md)
