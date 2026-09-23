@@ -18,6 +18,44 @@ if (-not (Test-Path $SourceRoot)) {
 $failures = [System.Collections.Generic.List[string]]::new()
 $checks = 0
 
+# Rice2k is a WPF application that enables WinForms only for its optional
+# notification bridge. With implicit usings enabled, the Windows Forms SDK can
+# inject System.Drawing and System.Windows.Forms globally; those namespaces
+# contain names that can collide with WPF names (for example Application,
+# Clipboard, Color, Point, and Size). Require the project to remove those two
+# namespaces from implicit usings while retaining the WinForms framework.
+$projectFile = Join-Path $SourceRoot 'Rice2k.App.csproj'
+if (Test-Path $projectFile) {
+    try {
+        [xml]$projectXml = Get-Content -Raw -Path $projectFile
+        $propertyGroups = @($projectXml.Project.PropertyGroup)
+        $useWpf = [string](($propertyGroups.UseWPF | Where-Object { $_ } | Select-Object -First 1))
+        $useWinForms = [string](($propertyGroups.UseWindowsForms | Where-Object { $_ } | Select-Object -First 1))
+        $implicitUsings = [string](($propertyGroups.ImplicitUsings | Where-Object { $_ } | Select-Object -First 1))
+
+        if ($useWpf -eq 'true' -and $useWinForms -eq 'true' -and $implicitUsings -match '^(?i:true|enable)$') {
+            $removedUsings = @(
+                $projectXml.Project.ItemGroup.Using |
+                    Where-Object { $_.Remove } |
+                    ForEach-Object { [string]$_.Remove }
+            )
+
+            foreach ($requiredRemoval in @('System.Drawing', 'System.Windows.Forms')) {
+                $checks++
+                if ($removedUsings -notcontains $requiredRemoval) {
+                    $failures.Add("Rice2k.App.csproj enables WPF + WinForms + implicit usings but does not remove '$requiredRemoval'. This can create ambiguous WPF/WinForms type names.")
+                }
+            }
+        }
+    }
+    catch {
+        $failures.Add("Rice2k.App.csproj could not be inspected by the static preflight: $($_.Exception.Message)")
+    }
+}
+else {
+    $failures.Add("Rice2k.App.csproj was not found beneath the WPF source root.")
+}
+
 # Event attributes commonly used by the Rice2k WPF XAML. The preflight only
 # treats identifier-shaped values as code-behind handlers.
 $eventNames = @(
@@ -65,8 +103,8 @@ foreach ($xamlFile in $xamlFiles) {
 # signature. This specifically catches collisions such as two OnInitialized
 # implementations before the WPF compiler is invoked.
 $lifecycleNames = @(
-    'OnInitialized', 'OnContentRendered', 'OnSourceInitialized', 'OnDrop',
-    'OnExit', 'OnStartup', 'OnClosed', 'OnClosing'
+    'OnInitialized', 'OnContentRendered', 'OnSourceInitialized', 'OnPreviewDrop',
+    'OnDrop', 'OnExit', 'OnStartup', 'OnClosed', 'OnClosing'
 )
 
 $csFiles = Get-ChildItem -Path $SourceRoot -Filter '*.cs' -File -Recurse
@@ -110,5 +148,5 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 
-Write-Host 'STATIC PREFLIGHT PASSED: no missing/duplicate XAML handlers or duplicate lifecycle overrides detected.' -ForegroundColor Green
+Write-Host 'STATIC PREFLIGHT PASSED: project namespace isolation, XAML handlers, and lifecycle overrides look consistent.' -ForegroundColor Green
 exit 0
