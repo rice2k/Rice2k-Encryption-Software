@@ -86,6 +86,7 @@ public partial class MainWindow
             ClearTransientSensitivePreviews();
 
         RefreshPrivacyQuickToggle();
+        ApplyAppLockSettings(settings);
         if (_privacyUiInitialized)
         {
             GlobalStatusText.Text = settings.PrivacyModeEnabled
