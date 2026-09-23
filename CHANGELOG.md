@@ -94,6 +94,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - App Lock setup/removal rollback and recoverable orphan-credential handling when preference persistence fails.
 - Source-controlled App Lock credential tests for correct/wrong password behavior, safe removal, verifier modification, minimum password policy, malformed JSON, unsupported versions, invalid salt length, oversized credential files, hostile Argon2 operation/memory parameters, credential replacement, and temp-file cleanup.
 - Source-controlled application-settings persistence tests for round-trip/temp cleanup, malformed JSON fallback, timing normalization, and oversized-file fallback.
+- Source-controlled format-limit regression tests for oversized encrypted text, key/recovery package metadata, and identity display names.
 - Expanded keyboard/focus navigation including F6 / Shift+F6, Settings search focus, Privacy Mode shortcut, App Lock shortcut, and Security Center shortcut.
 - Visible keyboard-focus border in the shared button template.
 - Startup high-contrast palette mapping to Windows system brushes.
@@ -124,6 +125,9 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Application settings loading now rejects empty/oversized files before JSON parsing and supports an isolated directory for regression tests.
 - Local validation summary generation no longer depends on a PowerShell-7-only `Path.GetRelativePath` API; the documented Windows PowerShell command remains supported.
 - Static partial-method signature detection canonicalizes parameter declarations and uses explicit separator control flow for generic/tuple-aware top-level parameter splitting.
+- Text encryption now rejects plaintext that would produce a token above the format's 16 MiB parser limit before Argon2/encryption work.
+- `.r2kkey` and `.r2krecovery` creation now rejects serialized metadata that would exceed their importer's 64 KiB encrypted-payload limit before KDF/output creation.
+- Identity generation/private import/public import/export now share the same 1–200 character display-name contract; private/public output size is bounded before finalization and public-card temporary output is flushed before atomic move.
 - Encrypt/Decrypt screens hide cryptographic details behind recommended defaults instead of exposing them as required choices.
 - Encrypt offers **Password only** and **Password + Rice2k key file** without changing existing password-only files.
 - Decrypt automatically distinguishes password-only `R2KENC01` containers from password + key-file `R2KENC02` containers.
@@ -155,9 +159,10 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - v2 key-file containers bind the required key fingerprint into authenticated metadata/header associated data.
 - The public v2 fingerprint is treated only as a selection hint until authenticated metadata is successfully opened.
 - Password + key-file encryption fails closed unless both the password-derived key and matching key-file secret are present.
-- Text tokens validate size, salt, nonce, and ciphertext structure before decryption.
-- `.r2kkey`, `.r2krecovery`, and `.r2kid` package parsers bound KDF/ciphertext parameters before expensive work.
+- Text tokens validate size, salt, nonce, and ciphertext structure before decryption, and text encryption cannot emit a token outside the supported parser size.
+- `.r2kkey`, `.r2krecovery`, and `.r2kid` package parsers bound KDF/ciphertext parameters before expensive work; package creators now enforce matching output-size limits before KDF/finalization.
 - Key/recovery/private-identity packages authenticate encrypted payloads and security-relevant header parameters.
+- Public identity cards and private identity packages enforce one display-name contract across creation/export/import.
 - Raw symmetric/private key bytes are not displayed in the normal user interface.
 - In-memory managed/private keys are cleared on a best-effort basis when removed or their manager closes.
 - Recovery tests clear temporary recovered key material after fingerprint verification.
@@ -182,4 +187,4 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Lock-screen activation is deferred during credential mutation so the lock dialog never intentionally authenticates against a credential mid-transition.
 - App Lock is explicitly scoped as a same-application privacy barrier, not protection against an attacker already controlling the Windows account or local Rice2k files.
 - Security Center does not display passwords, private keys, plaintext, or recovery secrets and does not convert configuration state into a claim of completed release validation.
-- Security tests cover round trips, wrong passwords/keys/recipients, tampering, truncation, resource-limit rejection, overwrite protection, cancellation cleanup, vault recovery/fault injection, identities, signatures, contacts, App Lock credential behavior, and application-settings persistence edge cases.
+- Security tests cover round trips, wrong passwords/keys/recipients, tampering, truncation, resource-limit rejection, overwrite protection, cancellation cleanup, vault recovery/fault injection, identities, signatures, contacts, App Lock credential behavior, application-settings persistence edge cases, and package-format output limits.
