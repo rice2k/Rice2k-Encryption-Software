@@ -12,6 +12,7 @@ public partial class SecureVaultWindow
     {
         base.OnContentRendered(e);
         InitializeRecoveryBackupUi();
+        InitializeVaultHardeningUi();
     }
 
     private void InitializeRecoveryBackupUi()
