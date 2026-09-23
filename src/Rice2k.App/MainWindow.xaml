@@ -4,7 +4,10 @@
         Title="Rice2k Encryption Software"
         Width="1280" Height="820"
         MinWidth="1050" MinHeight="700"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        AllowDrop="True"
+        PreviewDragOver="Window_DragOver"
+        Drop="Window_Drop">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
@@ -45,7 +48,7 @@
                     <StackPanel>
                         <TextBlock Text="● Ready" Foreground="{StaticResource SuccessBrush}" FontWeight="SemiBold" />
                         <TextBlock Text="Local / offline by design" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,3,0,0" />
-                        <TextBlock Text="v0.1 development" Foreground="{StaticResource MutedTextBrush}" FontSize="11" />
+                        <TextBlock Text="v0.2 development" Foreground="{StaticResource MutedTextBrush}" FontSize="11" />
                     </StackPanel>
                 </Border>
             </DockPanel>
@@ -71,6 +74,13 @@
                         </Grid>
                     </Border>
 
+                    <Border Background="#0D1728" BorderBrush="{StaticResource PrimaryBrush}" BorderThickness="1" CornerRadius="10" Padding="22" Margin="0,2,0,18">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="Drop a file anywhere in Rice2k" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                            <TextBlock Text="Normal files open the Encrypt wizard. .r2kenc files open the Decrypt wizard." Foreground="{StaticResource MutedTextBrush}" Margin="0,6,0,0" TextAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Quick actions" FontSize="19" FontWeight="SemiBold" Margin="0,8,0,10" />
                     <WrapPanel>
                         <Button Content="🔒  Encrypt a file" Tag="Encrypt" Click="QuickNavigate_Click" Width="190" Height="54" Margin="0,0,12,12" />
@@ -92,7 +102,7 @@
                         <Border Grid.Column="1" Style="{StaticResource CardStyle}">
                             <StackPanel>
                                 <TextBlock Text="How Rice2k protects your files" FontSize="17" FontWeight="SemiBold" />
-                                <TextBlock Text="1. Read original without modifying it" Margin="0,10,0,3" />
+                                <TextBlock Text="1. Check the source and destination" Margin="0,10,0,3" />
                                 <TextBlock Text="2. Encrypt to a temporary output" Margin="0,0,0,3" />
                                 <TextBlock Text="3. Authenticate and verify" Margin="0,0,0,3" />
                                 <TextBlock Text="4. Finalize the .r2kenc file" />
@@ -106,36 +116,124 @@
             <ScrollViewer x:Name="EncryptPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <TextBlock Text="Encrypt File" FontSize="30" FontWeight="SemiBold" />
-                    <TextBlock Text="Your original file stays untouched. Rice2k creates and verifies a new .r2kenc file." Foreground="{StaticResource MutedTextBrush}" Margin="0,4,0,20" />
-                    <Border Style="{StaticResource CardStyle}">
+                    <TextBlock Text="Your original stays untouched. Rice2k guides you through three simple steps." Foreground="{StaticResource MutedTextBrush}" Margin="0,4,0,10" />
+                    <TextBlock x:Name="EncryptStepIndicator" Text="● Step 1  Choose file    ○ Step 2  Protection    ○ Step 3  Review" Foreground="{StaticResource PrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,18" />
+
+                    <Border x:Name="EncryptStep1Panel" Style="{StaticResource CardStyle}">
                         <StackPanel>
-                            <Label Content="1. Choose the file to protect" />
+                            <TextBlock Text="Step 1 — Choose what to protect" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock Text="Browse for a file or drag one anywhere onto the Rice2k window." Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,16" />
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <TextBox x:Name="EncryptSourceBox" IsReadOnly="True" ToolTip="File that will be encrypted" />
                                 <Button Grid.Column="1" Content="Browse…" Click="BrowseEncryptSource_Click" Margin="10,0,0,0" />
                             </Grid>
+                            <TextBlock x:Name="EncryptSourceSummaryText" Text="No file selected" Foreground="{StaticResource MutedTextBrush}" Margin="0,8,0,0" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                                <Button Content="Continue →" Click="EncryptStep1Next_Click" MinWidth="130" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
 
-                            <Label Content="2. Encrypted output" Margin="0,16,0,0" />
-                            <TextBox x:Name="EncryptDestinationBox" ToolTip="Where the .r2kenc file will be saved" />
+                    <Border x:Name="EncryptStep2Panel" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Step 2 — Choose protection" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock Text="Recommended security is already selected. You only need to choose a password." Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,16" />
 
-                            <Label Content="3. Password" Margin="0,16,0,0" />
-                            <PasswordBox x:Name="EncryptPasswordBox" ToolTip="Use a long unique password. Rice2k cannot recover a forgotten password." />
-                            <TextBlock Text="Important: Rice2k cannot recover a forgotten password." Foreground="{StaticResource WarningBrush}" FontSize="12" Margin="0,5,0,0" />
-
-                            <CheckBox x:Name="VerifyAfterEncryptCheck" Content="Verify encrypted data before finalizing (recommended)" IsChecked="True" Foreground="{StaticResource TextBrush}" Margin="0,16,0,0" />
-
-                            <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,18,0,0">
+                            <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
                                 <StackPanel>
-                                    <TextBlock x:Name="EncryptStatusText" Text="Ready" FontWeight="SemiBold" />
-                                    <ProgressBar x:Name="EncryptProgressBar" Minimum="0" Maximum="100" Value="0" Margin="0,9,0,6" />
-                                    <TextBlock x:Name="EncryptProgressDetails" Text="0%" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+                                    <TextBlock Text="Recommended protection" FontWeight="SemiBold" />
+                                    <TextBlock Text="XChaCha20-Poly1305 + Argon2id" Foreground="{StaticResource SuccessBrush}" Margin="0,5,0,0" />
+                                    <TextBlock Text="Rice2k automatically handles salts, nonces, authentication, and secure file chunks." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,0" />
                                 </StackPanel>
                             </Border>
 
+                            <Label Content="Create a password" Margin="0,14,0,0" />
+                            <PasswordBox x:Name="EncryptPasswordBox" PasswordChanged="EncryptPassword_Changed" ToolTip="Use a long unique password. Rice2k cannot recover a forgotten password." />
+                            <Label Content="Confirm password" Margin="0,10,0,0" />
+                            <PasswordBox x:Name="EncryptConfirmPasswordBox" PasswordChanged="EncryptPassword_Changed" />
+                            <TextBlock x:Name="EncryptPasswordStrengthText" Text="Enter at least 12 characters" Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,6,0,0" />
+                            <Button Content="Generate a strong password" Click="GenerateEncryptPassword_Click" Style="{StaticResource SecondaryButtonStyle}" Width="210" HorizontalAlignment="Left" Margin="0,10,0,0" />
+
+                            <TextBlock Text="Important: Rice2k cannot recover a forgotten password." Foreground="{StaticResource WarningBrush}" FontSize="12" Margin="0,12,0,0" />
+                            <CheckBox x:Name="VerifyAfterEncryptCheck" Content="Verify encrypted data before finalizing (recommended)" IsChecked="True" Foreground="{StaticResource TextBrush}" Margin="0,14,0,0" />
+
+                            <Grid Margin="0,20,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Button Content="← Back" Click="EncryptBackTo1_Click" Style="{StaticResource SecondaryButtonStyle}" Width="100" HorizontalAlignment="Left" />
+                                <Button Grid.Column="1" Content="Review →" Click="EncryptStep2Next_Click" MinWidth="130" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="EncryptStep3Panel" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Step 3 — Review and encrypt" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock Text="Check the details below. Rice2k will run safety checks again before encryption starts." Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,16" />
+
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="145"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <TextBlock Text="File" Foreground="{StaticResource MutedTextBrush}" />
+                                <TextBlock x:Name="EncryptReviewFileText" Grid.Column="1" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="1" Text="" />
+                            </Grid>
+                            <TextBlock x:Name="EncryptReviewSizeText" Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,12" />
+
+                            <Label Content="Encrypted output" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBox x:Name="EncryptDestinationBox" IsReadOnly="True" ToolTip="Where the .r2kenc file will be saved" />
+                                <Button Grid.Column="1" Content="Choose location…" Click="BrowseEncryptDestination_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                            </Grid>
+
+                            <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Safety check" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="EncryptPreflightText" Text="Not checked yet" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <Grid Margin="0,20,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Button Content="← Back" Click="EncryptBackTo2_Click" Style="{StaticResource SecondaryButtonStyle}" Width="100" HorizontalAlignment="Left" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Content="Check again" Click="RunEncryptPreflight_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="EncryptStartButton" Content="🔒 Encrypt now" Click="StartEncrypt_Click" MinWidth="150" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="EncryptOperationPanel" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Protecting your file" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock x:Name="EncryptStatusText" Text="Preparing…" FontWeight="SemiBold" Margin="0,12,0,4" />
+                            <ProgressBar x:Name="EncryptProgressBar" Minimum="0" Maximum="100" Value="0" Margin="0,8,0,6" />
+                            <TextBlock x:Name="EncryptProgressDetails" Text="Starting safety checks…" Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
+
+                            <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock x:Name="EncryptStagePrepare" Text="● Checking source and destination" Margin="0,0,0,5" />
+                                    <TextBlock x:Name="EncryptStageProcess" Text="○ Encrypting file data" Margin="0,0,0,5" />
+                                    <TextBlock x:Name="EncryptStageVerify" Text="○ Verifying encrypted data" Margin="0,0,0,5" />
+                                    <TextBlock x:Name="EncryptStageFinalize" Text="○ Finalizing output" />
+                                </StackPanel>
+                            </Border>
+
+                            <Button x:Name="EncryptCancelButton" Content="Cancel safely" Click="CancelOperation_Click" IsEnabled="False" Style="{StaticResource SecondaryButtonStyle}" Width="130" HorizontalAlignment="Left" Margin="0,18,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="EncryptCompletePanel" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="✓ Encryption complete" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}" />
+                            <TextBlock Text="The encrypted file was finalized successfully. Your original file was not changed." Margin="0,7,0,16" />
+                            <TextBlock Text="Encrypted file" Foreground="{StaticResource MutedTextBrush}" />
+                            <TextBlock x:Name="EncryptCompletePathText" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,10" />
+                            <TextBlock x:Name="EncryptCompleteTimeText" Foreground="{StaticResource MutedTextBrush}" />
                             <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
-                                <Button x:Name="EncryptStartButton" Content="🔒 Encrypt" Click="StartEncrypt_Click" MinWidth="130" />
-                                <Button x:Name="EncryptCancelButton" Content="Cancel" Click="CancelOperation_Click" IsEnabled="False" Style="{StaticResource SecondaryButtonStyle}" />
+                                <Button Content="Open folder" Tag="Encrypt" Click="OpenOutputFolder_Click" />
+                                <Button Content="Encrypt another" Click="EncryptAnother_Click" Style="{StaticResource SecondaryButtonStyle}" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -146,30 +244,103 @@
             <ScrollViewer x:Name="DecryptPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <TextBlock Text="Decrypt File" FontSize="30" FontWeight="SemiBold" />
-                    <TextBlock Text="Open a Rice2k .r2kenc file and restore its contents." Foreground="{StaticResource MutedTextBrush}" Margin="0,4,0,20" />
-                    <Border Style="{StaticResource CardStyle}">
+                    <TextBlock Text="Restore a Rice2k .r2kenc file through the same guided three-step workflow." Foreground="{StaticResource MutedTextBrush}" Margin="0,4,0,10" />
+                    <TextBlock x:Name="DecryptStepIndicator" Text="● Step 1  Choose file    ○ Step 2  Unlock    ○ Step 3  Review" Foreground="{StaticResource PrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,18" />
+
+                    <Border x:Name="DecryptStep1Panel" Style="{StaticResource CardStyle}">
                         <StackPanel>
-                            <Label Content="Encrypted file" />
+                            <TextBlock Text="Step 1 — Choose encrypted file" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock Text="Choose a .r2kenc file or drag it anywhere onto the Rice2k window." Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,16" />
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <TextBox x:Name="DecryptSourceBox" IsReadOnly="True" />
                                 <Button Grid.Column="1" Content="Browse…" Click="BrowseDecryptSource_Click" Margin="10,0,0,0" />
                             </Grid>
-                            <Label Content="Restored output" Margin="0,16,0,0" />
-                            <TextBox x:Name="DecryptDestinationBox" />
-                            <Label Content="Password" Margin="0,16,0,0" />
-                            <PasswordBox x:Name="DecryptPasswordBox" />
+                            <TextBlock x:Name="DecryptSourceSummaryText" Text="No encrypted file selected" Foreground="{StaticResource MutedTextBrush}" Margin="0,8,0,0" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                                <Button Content="Continue →" Click="DecryptStep1Next_Click" MinWidth="130" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
 
-                            <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,18,0,0">
+                    <Border x:Name="DecryptStep2Panel" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Step 2 — Unlock and choose destination" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock Text="Enter the password used when this file was encrypted." Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,16" />
+                            <Label Content="Password" />
+                            <PasswordBox x:Name="DecryptPasswordBox" />
+                            <Label Content="Restored output" Margin="0,14,0,0" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBox x:Name="DecryptDestinationBox" IsReadOnly="True" />
+                                <Button Grid.Column="1" Content="Choose location…" Click="BrowseDecryptDestination_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="10,0,0,0" />
+                            </Grid>
+                            <TextBlock Text="Rice2k will never overwrite an existing restored file automatically." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,6,0,0" />
+                            <Grid Margin="0,20,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Button Content="← Back" Click="DecryptBackTo1_Click" Style="{StaticResource SecondaryButtonStyle}" Width="100" HorizontalAlignment="Left" />
+                                <Button Grid.Column="1" Content="Review →" Click="DecryptStep2Next_Click" MinWidth="130" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="DecryptStep3Panel" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Step 3 — Review and decrypt" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock Text="Rice2k will authenticate every encrypted chunk before writing the restored output." Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,16" />
+                            <TextBlock x:Name="DecryptReviewFileText" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock x:Name="DecryptReviewSizeText" Foreground="{StaticResource MutedTextBrush}" Margin="0,5,0,12" />
+                            <TextBlock Text="Restore to" Foreground="{StaticResource MutedTextBrush}" />
+                            <TextBlock x:Name="DecryptReviewDestinationText" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                            <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,16,0,0">
                                 <StackPanel>
-                                    <TextBlock x:Name="DecryptStatusText" Text="Ready" FontWeight="SemiBold" />
-                                    <ProgressBar x:Name="DecryptProgressBar" Minimum="0" Maximum="100" Value="0" Margin="0,9,0,6" />
-                                    <TextBlock x:Name="DecryptProgressDetails" Text="0%" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+                                    <TextBlock Text="Safety check" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="DecryptPreflightText" Text="Not checked yet" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,5,0,0" />
                                 </StackPanel>
                             </Border>
+
+                            <Grid Margin="0,20,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Button Content="← Back" Click="DecryptBackTo2_Click" Style="{StaticResource SecondaryButtonStyle}" Width="100" HorizontalAlignment="Left" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Content="Check again" Click="RunDecryptPreflight_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="DecryptStartButton" Content="🔓 Decrypt now" Click="StartDecrypt_Click" MinWidth="150" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="DecryptOperationPanel" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Restoring your file" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock x:Name="DecryptStatusText" Text="Preparing…" FontWeight="SemiBold" Margin="0,12,0,4" />
+                            <ProgressBar x:Name="DecryptProgressBar" Minimum="0" Maximum="100" Value="0" Margin="0,8,0,6" />
+                            <TextBlock x:Name="DecryptProgressDetails" Text="Starting safety checks…" Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
+
+                            <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock x:Name="DecryptStagePrepare" Text="● Checking source and destination" Margin="0,0,0,5" />
+                                    <TextBlock x:Name="DecryptStageAuthenticate" Text="○ Authenticating encrypted file" Margin="0,0,0,5" />
+                                    <TextBlock x:Name="DecryptStageProcess" Text="○ Restoring file data" Margin="0,0,0,5" />
+                                    <TextBlock x:Name="DecryptStageFinalize" Text="○ Finalizing restored file" />
+                                </StackPanel>
+                            </Border>
+
+                            <Button x:Name="DecryptCancelButton" Content="Cancel safely" Click="CancelOperation_Click" IsEnabled="False" Style="{StaticResource SecondaryButtonStyle}" Width="130" HorizontalAlignment="Left" Margin="0,18,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="DecryptCompletePanel" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="✓ Decryption complete" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}" />
+                            <TextBlock Text="Authentication and file-length checks passed." Margin="0,7,0,16" />
+                            <TextBlock Text="Restored file" Foreground="{StaticResource MutedTextBrush}" />
+                            <TextBlock x:Name="DecryptCompletePathText" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,10" />
+                            <TextBlock x:Name="DecryptCompleteTimeText" Foreground="{StaticResource MutedTextBrush}" />
                             <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
-                                <Button x:Name="DecryptStartButton" Content="🔓 Decrypt" Click="StartDecrypt_Click" MinWidth="130" />
-                                <Button x:Name="DecryptCancelButton" Content="Cancel" Click="CancelOperation_Click" IsEnabled="False" Style="{StaticResource SecondaryButtonStyle}" />
+                                <Button Content="Open folder" Tag="Decrypt" Click="OpenOutputFolder_Click" />
+                                <Button Content="Decrypt another" Click="DecryptAnother_Click" Style="{StaticResource SecondaryButtonStyle}" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -310,7 +481,7 @@
         <Border Grid.Row="1" Grid.ColumnSpan="2" Background="#08101C" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
             <Grid Margin="14,0">
                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <TextBlock x:Name="GlobalStatusText" Text="● Ready   |   Offline/local   |   v0.1.0" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" FontSize="12" />
+                <TextBlock x:Name="GlobalStatusText" Text="● Ready   |   Offline/local   |   v0.2-dev" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" FontSize="12" />
                 <TextBlock Grid.Column="1" Text="Rice2k Encryption Software" Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" FontSize="12" />
             </Grid>
         </Border>
