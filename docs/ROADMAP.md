@@ -120,21 +120,25 @@ This document tracks implementation status and the remaining release gates. A ch
 - [x] Protected clipboard integration for main text/password/checksum copies and identity/contact/recipient fingerprints
 - [x] Argon2id-backed authenticated App Lock credential verifier with 12-character minimum password
 - [x] App Lock on application startup once configured
+- [x] Startup UI blanking before App Lock authentication so the main window/onboarding are not intentionally exposed first
 - [x] Manual Lock Rice2k action and `Ctrl+L` shortcut
 - [x] Authenticated app lock on minimize
 - [x] App lock on Windows session lock using `SystemEvents.SessionSwitch`
 - [x] Configurable main-application inactivity lock: Never / 1 / 5 / 10 / 15 / 30 minutes
 - [x] App Lock clears transient sensitive previews and Rice2k-owned clipboard content before showing the lock screen
 - [x] App Lock visually blanks existing Rice2k windows while preserving modal dialog lifecycle
-- [x] Source-controlled app-lock credential tests for round trip, wrong password, removal, tampered verifier, and hostile KDF parameters
+- [x] App Lock presentation restoration occurs from a guarded `finally` path
+- [x] App Lock configuration/removal handles settings-write failure with rollback or recoverable orphan-credential status
+- [x] Source-controlled App Lock credential tests for round trip, wrong password, safe removal, tampered verifier, malformed JSON, unsupported version, invalid salt length, oversized credential files, and hostile Argon2 operation/memory parameters
 - [x] Expanded keyboard shortcut/focus foundation including F6 / Shift+F6 active-page/navigation focus movement
 - [x] Visible keyboard-focus border in the shared button template
 - [x] Startup high-contrast palette mapping to Windows system brushes
 - [x] App Lock screen screen-reader names, help text, and polite live status
+- [x] Operational Security Center for crypto/privacy/App Lock/vault/recovery/validation configuration status
+- [x] Security Center Refresh, Lock Rice2k, Open Settings, and `Ctrl+Shift+S` access
 - [ ] Optional recent-file history
 - [x] In-memory activity log with sensitive-data avoidance
 - [ ] Persistent activity log with explicit opt-in and sensitive-data redaction
-- [ ] Full Security Center
 - [x] Basic offline/local status indicator
 - [ ] Theme and reduced-motion options
 - [ ] Windows notifications
