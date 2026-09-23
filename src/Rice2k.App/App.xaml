@@ -33,7 +33,7 @@
         </Style>
 
         <Style TargetType="Button">
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
             <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
             <Setter Property="BorderThickness" Value="1" />
@@ -56,6 +56,10 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Border" Property="Background" Value="{StaticResource PrimaryHoverBrush}" />
                             </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource SecondaryBrush}" />
+                                <Setter TargetName="Border" Property="BorderThickness" Value="2" />
+                            </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Border" Property="Opacity" Value="0.45" />
                             </Trigger>
@@ -72,9 +76,9 @@
 
         <Style TargetType="TextBox">
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-            <Setter Property="Background" Value="#0D1728" />
+            <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
-            <Setter Property="CaretBrush" Value="White" />
+            <Setter Property="CaretBrush" Value="{StaticResource TextBrush}" />
             <Setter Property="Padding" Value="10" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="FontSize" Value="14" />
@@ -82,8 +86,9 @@
 
         <Style TargetType="PasswordBox">
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-            <Setter Property="Background" Value="#0D1728" />
+            <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+            <Setter Property="CaretBrush" Value="{StaticResource TextBrush}" />
             <Setter Property="Padding" Value="10" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="FontSize" Value="14" />
@@ -92,7 +97,7 @@
         <Style TargetType="ProgressBar">
             <Setter Property="Height" Value="10" />
             <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
-            <Setter Property="Background" Value="#1A2940" />
+            <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
         </Style>
 
         <Style x:Key="NavButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
