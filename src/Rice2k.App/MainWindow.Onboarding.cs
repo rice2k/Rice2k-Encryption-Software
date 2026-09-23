@@ -14,6 +14,7 @@ public partial class MainWindow
         InitializePauseButtons();
         InitializeExperienceUi();
         InitializePrivacyUi();
+        InitializeAppLockUi();
         InitializeCollisionGuards();
         InitializeAccessibilityUi();
         InitializeKeyManagerUi();
@@ -22,18 +23,20 @@ public partial class MainWindow
         InitializeKeyFileProtectionUi();
         InitializeKeyFileResetHooks();
 
-        if (_onboardingChecked)
-            return;
-
-        _onboardingChecked = true;
-        var settings = _appSettingsService.Load();
-        if (settings.FirstRunTourCompleted)
-            return;
-
-        var tour = new WelcomeTourWindow(_appSettingsService)
+        if (!_onboardingChecked)
         {
-            Owner = this
-        };
-        tour.ShowDialog();
+            _onboardingChecked = true;
+            var settings = _appSettingsService.Load();
+            if (!settings.FirstRunTourCompleted)
+            {
+                var tour = new WelcomeTourWindow(_appSettingsService)
+                {
+                    Owner = this
+                };
+                tour.ShowDialog();
+            }
+        }
+
+        RequestStartupLockIfNeeded();
     }
 }
