@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace Rice2k.Encryption;
 
@@ -13,35 +14,41 @@ public partial class MainWindow
     {
         base.OnClosing(e);
 
+        var settingsSecurityBusy = IsSettingsSecurityOperationActive();
+
         // Do not interfere with an application-wide/fatal shutdown that is already
         // underway. The global exception path intentionally exits rather than
         // continuing in an unknown state.
         if (e.Cancel ||
             _safeExitApproved ||
             Application.Current.Dispatcher.HasShutdownStarted ||
-            _operationCts is null)
+            (_operationCts is null && !settingsSecurityBusy))
         {
             return;
         }
 
-        // Normal user close while file crypto is active: preserve the user's close
-        // intent, request the same cancellation used by the UI, and keep the WPF
-        // process alive until the operation's finally block has released its CTS.
-        // This gives the crypto service a chance to remove incomplete temporary
-        // output before the application exits.
+        // Preserve the user's normal close intent while security-sensitive work is
+        // active. File/integrity work is cancellation-aware; App Lock credential
+        // setup/removal uses synchronous Argon2/atomic credential operations on a
+        // worker thread and is allowed to reach its consistency boundary before exit.
         e.Cancel = true;
         _safeExitRequested = true;
-        GlobalStatusText.Text = "● Cancelling active operation before exit…   |   waiting for safe cleanup";
+        GlobalStatusText.Text = settingsSecurityBusy
+            ? "● Waiting for security settings to finish before exit…   |   preserving App Lock consistency"
+            : "● Cancelling active operation before exit…   |   waiting for safe cleanup";
 
-        try
+        if (_operationCts is not null)
         {
-            if (!_operationCts.IsCancellationRequested)
-                _operationCts.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
-            // The operation is already crossing its cleanup boundary. The waiter
-            // below will observe the field becoming null and finish the close.
+            try
+            {
+                if (!_operationCts.IsCancellationRequested)
+                    _operationCts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The operation is already crossing its cleanup boundary. The waiter
+                // below will observe the field becoming null and finish the close.
+            }
         }
 
         if (!_safeExitWaitStarted)
@@ -55,8 +62,11 @@ public partial class MainWindow
     {
         try
         {
-            while (_operationCts is not null && !Dispatcher.HasShutdownStarted)
+            while ((_operationCts is not null || IsSettingsSecurityOperationActive()) &&
+                   !Dispatcher.HasShutdownStarted)
+            {
                 await Task.Delay(100);
+            }
         }
         finally
         {
@@ -69,5 +79,15 @@ public partial class MainWindow
         _safeExitRequested = false;
         _safeExitApproved = true;
         Dispatcher.BeginInvoke(new Action(Close));
+    }
+
+    private bool IsSettingsSecurityOperationActive()
+    {
+        if (SettingsPage.Content is not StackPanel root)
+            return false;
+
+        return root.Children
+            .OfType<SettingsSearchPanel>()
+            .Any(panel => panel.HasActiveAppLockOperation);
     }
 }
