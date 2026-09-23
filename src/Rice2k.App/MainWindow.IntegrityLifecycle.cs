@@ -16,9 +16,9 @@ public partial class MainWindow
             return;
 
         _integrityLifecycleInitialized = true;
-        _sha256Button = FindVisualChildren<Button>(IntegrityPage)
+        _sha256Button = FindIntegrityLogicalChildren<Button>(IntegrityPage)
             .FirstOrDefault(button => string.Equals(button.Content?.ToString(), "SHA-256", StringComparison.Ordinal));
-        _sha512Button = FindVisualChildren<Button>(IntegrityPage)
+        _sha512Button = FindIntegrityLogicalChildren<Button>(IntegrityPage)
             .FirstOrDefault(button => string.Equals(button.Content?.ToString(), "SHA-512", StringComparison.Ordinal));
 
         if (_sha256Button is not null)
@@ -101,5 +101,18 @@ public partial class MainWindow
             _sha256Button.IsEnabled = enabled;
         if (_sha512Button is not null)
             _sha512Button.IsEnabled = enabled;
+    }
+
+    private static IEnumerable<T> FindIntegrityLogicalChildren<T>(DependencyObject root) where T : DependencyObject
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(root))
+        {
+            if (child is T match)
+                yield return match;
+            if (child is not DependencyObject dependencyChild)
+                continue;
+            foreach (var descendant in FindIntegrityLogicalChildren<T>(dependencyChild))
+                yield return descendant;
+        }
     }
 }
