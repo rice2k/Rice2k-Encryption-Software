@@ -15,6 +15,7 @@ public partial class RecipientEncryptionWindow
     {
         base.OnContentRendered(e);
         InitializeContactsUi();
+        InitializeMetadataLifecycleUi();
     }
 
     private void InitializeContactsUi()
