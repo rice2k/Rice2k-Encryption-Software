@@ -9,7 +9,8 @@ public sealed class SecureVaultParserSafetyTests
     private const int OpsLimitOffset = 8 + 1 + 1 + 1;
     private const int MemLimitOffset = OpsLimitOffset + sizeof(long);
     private const int ChunkSizeOffset = MemLimitOffset + sizeof(int);
-    private const int ManifestCipherLengthOffset = ChunkSizeOffset + sizeof(int) + 16 + 16 + 24;
+    private const int VaultIdOffset = ChunkSizeOffset + sizeof(int) + 16;
+    private const int ManifestCipherLengthOffset = VaultIdOffset + 16 + 24;
 
     [Fact]
     public async Task Unlock_UnsupportedVersion_IsRejected()
@@ -80,6 +81,24 @@ public sealed class SecureVaultParserSafetyTests
 
         var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.UnlockAsync(vaultPath, Password));
         Assert.Contains("chunk size", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Unlock_EmptyVaultIdentifier_IsRejectedBeforeKdf()
+    {
+        using var temp = new TempDirectory();
+        var service = new SecureVaultService();
+        var vaultPath = temp.PathFor("empty-id.r2kvault");
+        using (await service.CreateAsync(vaultPath, Password))
+        {
+        }
+
+        var bytes = await File.ReadAllBytesAsync(vaultPath);
+        bytes.AsSpan(VaultIdOffset, 16).Clear();
+        await File.WriteAllBytesAsync(vaultPath, bytes);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.UnlockAsync(vaultPath, Password));
+        Assert.Contains("identifier", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
