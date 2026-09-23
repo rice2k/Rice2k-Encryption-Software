@@ -5,6 +5,7 @@
         Width="1180" Height="780"
         MinWidth="920" MinHeight="620"
         WindowStartupLocation="CenterOwner"
+        Loaded="Window_Loaded"
         PreviewMouseMove="Window_MouseActivity"
         PreviewKeyDown="Window_KeyActivity"
         Closing="Window_Closing">
@@ -23,8 +24,8 @@
                 <TextBlock Text="Encrypted filenames, metadata, and chunked file contents in a versioned .r2kvault container." Foreground="{StaticResource MutedTextBrush}" Margin="0,4,0,0" />
             </StackPanel>
             <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                <TextBlock x:Name="VaultLockStatusText" Text="🔒 Locked" FontWeight="SemiBold" FontSize="16" HorizontalAlignment="Right" />
-                <TextBlock x:Name="VaultPathStatusText" Text="No vault open" Foreground="{StaticResource MutedTextBrush}" FontSize="12" HorizontalAlignment="Right" Margin="0,3,0,0" />
+                <TextBlock x:Name="VaultLockStatusText" Text="🔒 Locked" FontWeight="SemiBold" FontSize="16" HorizontalAlignment="Right" AutomationProperties.Name="Vault lock status" />
+                <TextBlock x:Name="VaultPathStatusText" Text="No vault open" Foreground="{StaticResource MutedTextBrush}" FontSize="12" HorizontalAlignment="Right" Margin="0,3,0,0" AutomationProperties.Name="Current vault" />
             </StackPanel>
         </Grid>
 
@@ -42,8 +43,8 @@
                     <TextBlock Text="Vault locked" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,8,0,0" />
                     <TextBlock Text="Create a new secure vault or unlock an existing .r2kvault. Filenames and file metadata remain encrypted while the vault is locked." Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,22" />
                     <WrapPanel HorizontalAlignment="Center">
-                        <Button Content="Create New Vault" Click="CreateVault_Click" MinWidth="170" Height="46" Margin="0,0,10,10" />
-                        <Button Content="Open Existing Vault" Click="OpenVault_Click" Style="{StaticResource SecondaryButtonStyle}" MinWidth="180" Height="46" Margin="0,0,0,10" />
+                        <Button Content="Create New Vault" Click="CreateVault_Click" MinWidth="170" Height="46" Margin="0,0,10,10" AutomationProperties.HelpText="Create a new password-protected Rice2k secure vault" />
+                        <Button Content="Open Existing Vault" Click="OpenVault_Click" Style="{StaticResource SecondaryButtonStyle}" MinWidth="180" Height="46" Margin="0,0,0,10" AutomationProperties.HelpText="Unlock an existing Rice2k secure vault" />
                     </WrapPanel>
                     <TextBlock Text="Rice2k never stores the vault password. Losing it means losing access to the vault." Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,12,0,0" />
                 </StackPanel>
@@ -62,22 +63,31 @@
                         <Grid Grid.Row="0">
                             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <StackPanel Orientation="Horizontal">
-                                <Button Content="Add Files…" Click="AddFilesDetailed_Click" />
-                                <Button Content="Add Folder…" Click="AddFolderDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" />
-                                <Button Content="Extract…" Click="ExtractDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" />
-                                <Button Content="Rename…" Click="RenameDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" />
-                                <Button Content="Remove" Click="RemoveDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" />
+                                <Button Content="Add Files…" Click="AddFilesDetailed_Click" AutomationProperties.HelpText="Add one or more files to the unlocked vault" />
+                                <Button Content="Add Folder…" Click="AddFolderDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" AutomationProperties.HelpText="Add a folder and preserve its relative structure inside the vault" />
+                                <Button Content="Extract…" Click="ExtractDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" AutomationProperties.HelpText="Restore the selected vault file to a new destination" />
+                                <Button Content="Rename…" Click="RenameDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" AutomationProperties.HelpText="Rename the selected path inside the vault" />
+                                <Button Content="Remove" Click="RemoveDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" AutomationProperties.HelpText="Remove the selected protected file after building and verifying a replacement vault" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button Content="Verify Vault" Click="VerifyVaultDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" />
-                                <Button Content="Lock" Click="LockVault_Click" Style="{StaticResource SecondaryButtonStyle}" MinWidth="90" />
+                                <Button Content="Verify Vault" Click="VerifyVaultDetailed_Click" Style="{StaticResource SecondaryButtonStyle}" AutomationProperties.HelpText="Authenticate the vault manifest and all encrypted file chunks" />
+                                <Button Content="Lock" Click="LockVault_Click" Style="{StaticResource SecondaryButtonStyle}" MinWidth="90" AutomationProperties.HelpText="Clear the in-memory vault key and decrypted file listing" />
                             </StackPanel>
                         </Grid>
 
                         <Grid Grid.Row="1" Margin="0,12,0,0">
                             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <TextBox x:Name="SearchBox" TextChanged="SearchBox_TextChanged" ToolTip="Search encrypted vault filenames after the vault is unlocked" />
-                            <CheckBox x:Name="AutoLockCheckBox" Grid.Column="1" Content="Auto-lock after 10 minutes" IsChecked="True" VerticalAlignment="Center" Foreground="{StaticResource TextBrush}" Margin="14,0,0,0" />
+                            <TextBox x:Name="SearchBox" TextChanged="SearchBox_TextChanged" ToolTip="Search encrypted vault filenames after the vault is unlocked" AutomationProperties.Name="Search vault" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                                <CheckBox x:Name="AutoLockCheckBox" Content="Auto-lock" IsChecked="True" VerticalAlignment="Center" Foreground="{StaticResource TextBrush}" AutomationProperties.HelpText="Automatically lock the vault after the selected amount of inactivity" />
+                                <ComboBox x:Name="AutoLockMinutesComboBox" Width="115" Margin="8,0,0,0" SelectedIndex="2" AutomationProperties.Name="Vault auto-lock delay">
+                                    <ComboBoxItem Content="1 minute" Tag="1" />
+                                    <ComboBoxItem Content="5 minutes" Tag="5" />
+                                    <ComboBoxItem Content="10 minutes" Tag="10" />
+                                    <ComboBoxItem Content="15 minutes" Tag="15" />
+                                    <ComboBoxItem Content="30 minutes" Tag="30" />
+                                </ComboBox>
+                            </StackPanel>
                         </Grid>
                     </Grid>
                 </Border>
@@ -95,7 +105,8 @@
                               Foreground="{StaticResource TextBrush}"
                               BorderBrush="{StaticResource BorderBrush}"
                               RowBackground="#0D1728"
-                              AlternatingRowBackground="#111F35">
+                              AlternatingRowBackground="#111F35"
+                              AutomationProperties.Name="Protected files in vault">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="3*" />
                             <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="110" />
@@ -110,11 +121,11 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock x:Name="VaultOperationText" Text="Ready" FontWeight="SemiBold" />
-                        <TextBlock x:Name="VaultDetailText" Text="Unlock a vault to manage protected files." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0" />
+                        <TextBlock x:Name="VaultOperationText" Text="Ready" FontWeight="SemiBold" AutomationProperties.Name="Vault operation status" />
+                        <TextBlock x:Name="VaultDetailText" Text="Unlock a vault to manage protected files." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0" AutomationProperties.Name="Vault operation details" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <ProgressBar x:Name="VaultBusyProgress" Width="250" Height="12" Minimum="0" Maximum="100" IsIndeterminate="True" Visibility="Collapsed" VerticalAlignment="Center" />
+                        <ProgressBar x:Name="VaultBusyProgress" Width="250" Height="12" Minimum="0" Maximum="100" IsIndeterminate="True" Visibility="Collapsed" VerticalAlignment="Center" AutomationProperties.Name="Vault operation progress" />
                         <Button x:Name="VaultCancelButton"
                                 Content="Cancel safely"
                                 Click="CancelVaultOperation_Click"
@@ -122,7 +133,8 @@
                                 MinWidth="120"
                                 IsEnabled="False"
                                 Visibility="Collapsed"
-                                Margin="10,0,0,0" />
+                                Margin="10,0,0,0"
+                                AutomationProperties.HelpText="Cancel the current vault operation at a safe boundary while preserving the last known-good vault" />
                     </StackPanel>
                 </Grid>
             </Grid>
