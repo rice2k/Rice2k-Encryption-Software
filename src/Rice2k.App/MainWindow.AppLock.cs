@@ -130,9 +130,7 @@ public partial class MainWindow
         ApplyAppLockSettings(settings);
         if (settings.AppLockEnabled && _appLockCredentialService.IsConfigured())
         {
-            Dispatcher.BeginInvoke(
-                DispatcherPriority.Loaded,
-                new Action(() => RequestAppLock("Rice2k requires your app-lock password at startup.")));
+            RequestAppLock("Rice2k requires your app-lock password at startup.");
             return;
         }
 
