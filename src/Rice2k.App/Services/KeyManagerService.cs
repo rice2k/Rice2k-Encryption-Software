@@ -18,6 +18,7 @@ public sealed class KeyManagerService
     private const int SecretKeySize = 32;
     private const int AuthenticationTagSize = 16;
     private const int MinimumPasswordLength = 12;
+    private const int MaximumKeyNameCharacters = 200;
     private const int MaximumCipherLength = 64 * 1024;
     private const int MaximumPayloadLength = MaximumCipherLength - AuthenticationTagSize;
     private const long MaximumSupportedOpsLimit = 10;
@@ -31,10 +32,14 @@ public sealed class KeyManagerService
 
     public ManagedKey Generate(string name)
     {
+        var normalizedName = string.IsNullOrWhiteSpace(name) ? "Unnamed Key" : name.Trim();
+        if (normalizedName.Length > MaximumKeyNameCharacters)
+            throw new ArgumentException($"Key names must be {MaximumKeyNameCharacters} characters or fewer.", nameof(name));
+
         var secret = RandomNumberGenerator.GetBytes(SecretKeySize);
         try
         {
-            return new ManagedKey(Guid.NewGuid(), name, DateTimeOffset.UtcNow, "Generated in Rice2k", secret);
+            return new ManagedKey(Guid.NewGuid(), normalizedName, DateTimeOffset.UtcNow, "Generated in Rice2k", secret);
         }
         finally
         {
@@ -45,6 +50,7 @@ public sealed class KeyManagerService
     public async Task ExportAsync(ManagedKey managedKey, string destinationPath, string password, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(managedKey);
+        ValidateKeyMetadata(managedKey.Id, managedKey.Name);
         ValidatePassword(password, creatingPackage: true);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
 
@@ -203,6 +209,7 @@ public sealed class KeyManagerService
 
             var payload = JsonSerializer.Deserialize<KeyPayload>(plain)
                 ?? throw new InvalidDataException("The decrypted key package is missing its key data.");
+            ValidateKeyMetadata(payload.Id, payload.Name);
 
             try
             {
@@ -216,7 +223,7 @@ public sealed class KeyManagerService
             if (secret.Length != SecretKeySize)
                 throw new InvalidDataException("The key package does not contain a valid 256-bit key.");
 
-            return new ManagedKey(payload.Id, payload.Name, payload.CreatedUtc, "Imported .r2kkey", secret);
+            return new ManagedKey(payload.Id, payload.Name.Trim(), payload.CreatedUtc, "Imported .r2kkey", secret);
         }
         catch (EndOfStreamException ex)
         {
@@ -248,6 +255,14 @@ public sealed class KeyManagerService
         writer.Write(salt);
         writer.Flush();
         return stream.ToArray();
+    }
+
+    private static void ValidateKeyMetadata(Guid id, string name)
+    {
+        if (id == Guid.Empty)
+            throw new InvalidDataException("The key package contains an invalid key identifier.");
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaximumKeyNameCharacters)
+            throw new InvalidDataException($"Key names must contain 1 to {MaximumKeyNameCharacters} characters.");
     }
 
     private static void ValidatePassword(string password, bool creatingPackage)
