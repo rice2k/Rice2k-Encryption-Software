@@ -1,9 +1,12 @@
 using System.Windows;
+using Rice2k.Encryption.Services;
 
 namespace Rice2k.Encryption;
 
 public partial class FriendlyErrorDialog : Window
 {
+    private readonly ProtectedClipboardService _clipboard = new();
+
     private FriendlyErrorDialog(
         string message,
         string? technicalDetails,
@@ -53,8 +56,19 @@ public partial class FriendlyErrorDialog : Window
 
     private void CopyDetails_Click(object sender, RoutedEventArgs e)
     {
-        if (!string.IsNullOrWhiteSpace(TechnicalDetailsText.Text))
-            Clipboard.SetText(TechnicalDetailsText.Text);
+        if (string.IsNullOrWhiteSpace(TechnicalDetailsText.Text))
+            return;
+
+        try
+        {
+            _clipboard.CopyText(
+                TechnicalDetailsText.Text,
+                message => CopyDetailsButton.Content = message);
+        }
+        catch
+        {
+            CopyDetailsButton.Content = "Clipboard unavailable";
+        }
     }
 
     private void Ok_Click(object sender, RoutedEventArgs e)
