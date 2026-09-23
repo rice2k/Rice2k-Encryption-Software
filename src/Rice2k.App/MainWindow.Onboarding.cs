@@ -11,6 +11,7 @@ public partial class MainWindow
     {
         base.OnContentRendered(e);
         InitializePauseButtons();
+        InitializeExperienceUi();
 
         if (_onboardingChecked)
             return;
