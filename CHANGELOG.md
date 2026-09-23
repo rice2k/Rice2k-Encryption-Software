@@ -92,7 +92,8 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Startup presentation blanking so configured App Lock authenticates before the main UI or onboarding is intentionally exposed.
 - App Lock restoration from a guarded `finally` path so unexpected lock-dialog errors do not intentionally leave application windows blanked.
 - App Lock setup/removal rollback and recoverable orphan-credential handling when preference persistence fails.
-- Source-controlled App Lock credential tests for correct/wrong password behavior, safe removal, verifier modification, minimum password policy, malformed JSON, unsupported versions, invalid salt length, oversized credential files, and hostile Argon2 operation/memory parameters.
+- Source-controlled App Lock credential tests for correct/wrong password behavior, safe removal, verifier modification, minimum password policy, malformed JSON, unsupported versions, invalid salt length, oversized credential files, hostile Argon2 operation/memory parameters, credential replacement, and temp-file cleanup.
+- Source-controlled application-settings persistence tests for round-trip/temp cleanup, malformed JSON fallback, timing normalization, and oversized-file fallback.
 - Expanded keyboard/focus navigation including F6 / Shift+F6, Settings search focus, Privacy Mode shortcut, App Lock shortcut, and Security Center shortcut.
 - Visible keyboard-focus border in the shared button template.
 - Startup high-contrast palette mapping to Windows system brushes.
@@ -109,13 +110,20 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Main status bar and sidebar footer read the assembly informational version instead of relying on hard-coded milestone labels.
 - Command Center security state is labeled **PREVIEW** and distinguishes configured cryptographic design from still-pending Windows release validation.
 - First-run onboarding reflects the implemented Recovery Center and warns if its completed-state preference cannot be persisted.
+- Welcome Tour replay reports completion only when the tour actually completes successfully.
 - Main-window encrypt/decrypt and checksum work now participate in cancellation-aware deferred close instead of allowing application shutdown to race active file I/O.
+- MainWindow also waits for active App Lock credential setup/removal to reach its consistency boundary before ordinary exit.
+- App Lock requests caused by manual lock, minimize, Windows session lock, or inactivity are deferred while the credential is being changed/removed and re-evaluated against the final saved state.
+- Protect Folder captures its password once before asynchronous scanning, clears the visible password controls before the scan, and does not re-read secret UI state after an `await`.
 - Recipient Encryption preserves close intent during active work and makes recipient-card import/container inspection cancellation-aware.
 - Public Contacts and Secure Vault preserve close intent while asynchronous cleanup completes.
 - Privacy Mode reports clipboard/stored-history cleanup failure instead of silently implying cleanup succeeded.
 - Manual **Clear Clipboard Now** invalidates older Rice2k auto-clear timers through the protected clipboard generation model.
 - Stored-history clearing keeps its success/failure result visible after the history lists refresh.
 - Activity-page guidance now distinguishes default in-memory activity from explicit opt-in redacted persistent activity.
+- Application settings loading now rejects empty/oversized files before JSON parsing and supports an isolated directory for regression tests.
+- Local validation summary generation no longer depends on a PowerShell-7-only `Path.GetRelativePath` API; the documented Windows PowerShell command remains supported.
+- Static partial-method signature detection canonicalizes parameter declarations and uses explicit separator control flow for generic/tuple-aware top-level parameter splitting.
 - Encrypt/Decrypt screens hide cryptographic details behind recommended defaults instead of exposing them as required choices.
 - Encrypt offers **Password only** and **Password + Rice2k key file** without changing existing password-only files.
 - Decrypt automatically distinguishes password-only `R2KENC01` containers from password + key-file `R2KENC02` containers.
@@ -169,7 +177,9 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Optional persistent activity is opt-in, bounded, and stores action/timestamp only; filenames, paths and secret values remain outside the redacted activity record.
 - Privacy Mode surfaces cleanup failure if clipboard or optional stored-history deletion cannot be completed.
 - App Lock stores only a salted Argon2id-based verifier record, bounds its KDF parameters before expensive work, and uses fixed-time verifier comparison.
+- App Lock credential and application-settings temp files are flushed before same-directory replacement; settings files are size-bounded before parsing.
 - App Lock enable/remove persistence is ordered to avoid intentionally deleting a usable credential when the disabled state cannot be saved.
+- Lock-screen activation is deferred during credential mutation so the lock dialog never intentionally authenticates against a credential mid-transition.
 - App Lock is explicitly scoped as a same-application privacy barrier, not protection against an attacker already controlling the Windows account or local Rice2k files.
 - Security Center does not display passwords, private keys, plaintext, or recovery secrets and does not convert configuration state into a claim of completed release validation.
-- Security tests cover round trips, wrong passwords/keys/recipients, tampering, truncation, resource-limit rejection, overwrite protection, cancellation cleanup, vault recovery/fault injection, identities, signatures, contacts, and App Lock credential behavior.
+- Security tests cover round trips, wrong passwords/keys/recipients, tampering, truncation, resource-limit rejection, overwrite protection, cancellation cleanup, vault recovery/fault injection, identities, signatures, contacts, App Lock credential behavior, and application-settings persistence edge cases.
