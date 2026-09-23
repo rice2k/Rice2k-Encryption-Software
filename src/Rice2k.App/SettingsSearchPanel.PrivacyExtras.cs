@@ -24,6 +24,7 @@ public partial class SettingsSearchPanel
     {
         Loaded -= SettingsSearchPanel_PrivacyExtrasLoaded;
         EnsureDesktopNotificationControl();
+        InitializeClipboardClearHardening();
 
         _loading = true;
         try
