@@ -29,8 +29,10 @@ public sealed class ManagedKey : IDisposable
 
     internal byte[] CopySecretKey()
     {
-        ObjectDisposedException.ThrowIf(_secretKey is null, this);
-        return _secretKey!.ToArray();
+        if (_secretKey is null)
+            throw new ObjectDisposedException(nameof(ManagedKey), "This key is no longer available in memory.");
+
+        return _secretKey.ToArray();
     }
 
     public void Dispose()
