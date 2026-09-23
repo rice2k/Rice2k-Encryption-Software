@@ -11,6 +11,7 @@ namespace Rice2k.Encryption;
 public partial class IdentityManagerWindow : Window
 {
     private readonly IdentityService _service = new();
+    private readonly ProtectedClipboardService _clipboard = new();
     private readonly ObservableCollection<Rice2kIdentity> _identities = [];
 
     public IdentityManagerWindow()
@@ -162,8 +163,14 @@ public partial class IdentityManagerWindow : Window
             return;
         }
 
-        Clipboard.SetText(identity.Fingerprint);
-        StatusText.Text = "Fingerprint copied. Compare it through a trusted independent channel before treating a public identity as verified.";
+        try
+        {
+            _clipboard.CopyText(identity.Fingerprint, message => StatusText.Text = message + " Compare the fingerprint through a trusted independent channel before treating the public identity as verified.");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Windows could not access the clipboard. {ex.Message}");
+        }
     }
 
     private void RemoveIdentity_Click(object sender, RoutedEventArgs e)
