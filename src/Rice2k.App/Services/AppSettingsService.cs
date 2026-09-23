@@ -4,7 +4,10 @@ namespace Rice2k.Encryption.Services;
 
 public sealed record Rice2kAppSettings(
     bool FirstRunTourCompleted = false,
-    bool ShowHelpfulHints = true);
+    bool ShowHelpfulHints = true,
+    DateTimeOffset? LastRecoveryTestUtc = null,
+    string? LastRecoveryFingerprint = null,
+    string? LastRecoveryKeyName = null);
 
 public sealed class AppSettingsService
 {
@@ -59,8 +62,7 @@ public sealed class AppSettingsService
         }
         catch
         {
-            // Preferences are intentionally non-fatal. The application continues
-            // with safe defaults if Windows cannot persist this small settings file.
+            // Preferences must never stop the encryption application from operating.
             return false;
         }
         finally
