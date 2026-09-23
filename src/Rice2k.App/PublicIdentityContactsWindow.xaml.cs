@@ -10,6 +10,7 @@ namespace Rice2k.Encryption;
 public partial class PublicIdentityContactsWindow : Window
 {
     private readonly PublicIdentityContactStore _store = new();
+    private readonly ProtectedClipboardService _clipboard = new();
     private readonly ObservableCollection<Rice2kPublicIdentity> _contacts = [];
 
     public PublicIdentityContactsWindow()
@@ -113,9 +114,18 @@ public partial class PublicIdentityContactsWindow : Window
             return;
         }
 
-        Clipboard.SetText(identity.Fingerprint);
-        StatusText.Text = "Fingerprint copied";
-        DetailText.Text = "Compare it through an independent trusted channel before treating the contact label as verified.";
+        try
+        {
+            _clipboard.CopyText(identity.Fingerprint, message =>
+            {
+                StatusText.Text = message;
+                DetailText.Text = "Compare the fingerprint through an independent trusted channel before treating the contact label as verified.";
+            });
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Windows could not access the clipboard. {ex.Message}");
+        }
     }
 
     private void UseSelected_Click(object sender, RoutedEventArgs e)
