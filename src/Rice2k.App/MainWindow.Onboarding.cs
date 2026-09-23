@@ -17,6 +17,7 @@ public partial class MainWindow
         InitializeKeyManagerUi();
         InitializeRecoveryUi();
         InitializeKeyFileProtectionUi();
+        InitializeKeyFileResetHooks();
 
         if (_onboardingChecked)
             return;
