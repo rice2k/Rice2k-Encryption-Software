@@ -114,10 +114,10 @@ This document tracks implementation status and the remaining release gates. A ch
 - [x] Privacy Mode can clear transient text/password/generated-password previews when enabled
 - [x] Persisted Privacy Mode preferences in the non-secret application settings file
 - [x] Configurable clipboard auto-clear: Never / 15 / 30 / 60 / 120 seconds
-- [x] Clear Clipboard Now action
+- [x] Clear Clipboard Now action that invalidates older Rice2k clipboard timers
 - [x] Exact-value clipboard ownership check so Rice2k does not intentionally erase newer clipboard content
 - [x] App-wide clipboard generation so a newer Rice2k copy supersedes older timers across windows
-- [x] Protected clipboard integration for main text/password/checksum copies and identity/contact/recipient fingerprints
+- [x] Protected clipboard integration for main text/password/checksum copies, copied technical-error details, and identity/contact/recipient fingerprints
 - [x] Argon2id-backed authenticated App Lock credential verifier with 12-character minimum password
 - [x] App Lock on application startup once configured
 - [x] Startup UI blanking before App Lock authentication so the main window/onboarding are not intentionally exposed first
@@ -125,7 +125,7 @@ This document tracks implementation status and the remaining release gates. A ch
 - [x] Authenticated app lock on minimize
 - [x] App lock on Windows session lock using `SystemEvents.SessionSwitch`
 - [x] Configurable main-application inactivity lock: Never / 1 / 5 / 10 / 15 / 30 minutes
-- [x] App Lock clears transient sensitive previews and Rice2k-owned clipboard content before showing the lock screen
+- [x] App Lock clears transient sensitive previews and Rice2k-owned clipboard content before showing the lock screen where doing so will not invalidate an active operation
 - [x] App Lock visually blanks existing Rice2k windows while preserving modal dialog lifecycle
 - [x] App Lock presentation restoration occurs from a guarded `finally` path
 - [x] App Lock configuration/removal handles settings-write failure with rollback or recoverable orphan-credential status
@@ -140,12 +140,15 @@ This document tracks implementation status and the remaining release gates. A ch
 - [x] Optional recent-file history with explicit opt-in, bounded storage, deduplication, review, and clearing
 - [x] In-memory activity log with sensitive-data avoidance
 - [x] Persistent activity log with explicit opt-in and action-only redaction before disk storage
-- [x] Privacy Mode can clear optional recent-file and persistent activity history when enabled
+- [x] Privacy Mode can clear optional recent-file and persistent activity history when enabled and reports cleanup failure
 - [x] Source-controlled privacy-history tests for deduplication, redaction, clearing, and oversized-file rejection
 - [x] Basic offline/local status indicator
 - [x] Reduced-motion preference used by App Lock verification progress and persisted in local settings
 - [ ] Additional user-selectable theme modes beyond automatic Windows High Contrast adaptation
 - [x] Privacy-safe generic Windows completion notifications with a persisted on/off preference; suppressed during Privacy Mode
+- [x] Cancellation/deferred-close hardening for main file/integrity workflows and secret-owning key/recovery/identity/signature/vault windows
+- [x] Static WPF/source preflight for namespace collisions, XAML wiring, lifecycle overrides, and duplicate ordinary partial-class methods
+- [x] Fail-closed local validator that records static preflight, SDK, restore, Release build, tests, exit codes, version/commit, and a Markdown result
 - [ ] Full keyboard-only encryption/decryption acceptance pass
 - [ ] Full screen-reader/high-contrast/text-scaling/reduced-motion review
 - [ ] Execute the v0.6 privacy/app-lock regression suite on supported Windows/.NET 10
