@@ -2,7 +2,7 @@
 
 **Rice2k Encryption Software** is a modern, user-friendly Windows encryption application designed to make strong data protection understandable and practical for everyday users while still providing advanced security tools for experienced users.
 
-> **Project status:** early development / security-focused preview. Current application version: **0.6.0-preview.1**. Do not use a pre-1.0 build as the only copy of irreplaceable data, recovery material, or private keys.
+> **Project status:** early development / security-focused preview. Current application version: **0.6.0-preview.2**. Do not use a pre-1.0 build as the only copy of irreplaceable data, recovery material, or private keys.
 
 ## Current development features
 
@@ -119,9 +119,9 @@ Rice2k `.r2ksig` signatures use Ed25519 plus SHA-512 file hashing:
 
 Use recipient encryption when you need confidentiality. Use signatures when you need authenticity/integrity. Use both when you need both properties.
 
-## Privacy controls — v0.6 preview
+## Privacy and App Lock — v0.6 preview
 
-The first v0.6 privacy layer is operational:
+The v0.6 privacy layer now includes:
 
 - **Privacy Mode** quick toggle in the main navigation;
 - persisted Privacy Mode preference in the non-secret local settings file;
@@ -132,9 +132,18 @@ The first v0.6 privacy layer is operational:
 - app-wide clipboard ownership generation so a newer Rice2k copy supersedes older Rice2k timers;
 - exact-value checking before automatic clearing, so Rice2k does not intentionally erase a newer clipboard value copied afterward;
 - protected clipboard behavior for main text/password/checksum copies and identity/contact/recipient fingerprints;
+- authenticated **App Lock** using an Argon2id-derived verifier stored separately from the password;
+- 12-character minimum App Lock password;
+- automatic App Lock at application startup after it has been configured;
+- manual **Lock Rice2k** action;
+- optional lock-on-minimize;
+- optional lock when Windows reports that the current user session was locked;
+- configurable inactivity lock: **Never, 1, 5, 10, 15, or 30 minutes** without Rice2k input;
+- sensitive preview and Rice2k-owned clipboard clearing before the lock screen is shown;
+- existing Rice2k dialogs visually blanked while the modal lock screen owns application input, preserving their dialog lifecycle;
 - clear Local / offline status messaging.
 
-Privacy Mode is an interface/privacy feature, not an encryption mode. Authenticated main-application locking on minimize/Windows session lock is still a v0.6 work item and is not claimed as implemented yet.
+App Lock is an application-level privacy barrier. It is not a substitute for Windows sign-in security, BitLocker/full-disk encryption, or the independent passwords and keys that protect `.r2kenc`, `.r2kvault`, `.r2kkey`, `.r2kid`, and recovery material. A user or process that already controls the same Windows account and can modify Rice2k's local files is outside the App Lock security boundary.
 
 ## Security/regression testing foundation
 
@@ -148,11 +157,12 @@ The source-controlled xUnit suite covers, among other areas:
 - private/public identity package validation and tamper rejection;
 - recipient and multi-recipient encryption/decryption;
 - detached signature creation, verification, and tamper detection;
-- public identity contact-store import/load/remove/tamper behavior.
+- public identity contact-store import/load/remove/tamper behavior;
+- app-lock credential round trip, wrong-password rejection, removal behavior, verifier modification, and hostile Argon2 parameter rejection.
 
 `tools/Rice2k.VaultBench` provides a repeatable local benchmark/correctness harness for larger vault workloads.
 
-> **Validation limitation:** the current working environment does not contain the .NET SDK, and GitHub-hosted Actions jobs have not been assigned a runner during attempted validation. The newer tests and v0.6 UI changes are committed and source-reviewed but are **not claimed as compiled or executed** here.
+> **Validation limitation:** the current working environment does not contain the .NET SDK, and GitHub-hosted Actions jobs have not been assigned a runner during attempted validation. The newer tests and v0.6 App Lock/UI changes are committed and source-reviewed but are **not claimed as compiled or executed** here.
 
 ## File formats
 
@@ -207,12 +217,12 @@ Major release gates still include:
 
 - execute the full test suite on the supported Windows/.NET 10 toolchain;
 - large-vault and multi-gigabyte benchmark runs;
-- authenticated application locking on minimize / Windows session lock and main-app inactivity lock;
-- complete Privacy Mode / accessibility acceptance testing;
+- complete v0.6 Privacy Mode/App Lock acceptance testing on Windows;
+- optional recent-history and opt-in redacted persistent activity design;
+- full keyboard/screen-reader/high-contrast/scaling/reduced-motion review;
 - Advanced Mode and compatibility controls;
 - AES-256-GCM interoperability mode;
 - broader fuzzing/concurrency tests;
-- full keyboard/screen-reader/high-contrast/scaling/reduced-motion review;
 - signed Windows installer, portable release, and signed update path;
 - dedicated security review before stable use is recommended.
 
