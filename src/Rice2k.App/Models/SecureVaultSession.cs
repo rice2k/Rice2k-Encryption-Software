@@ -9,6 +9,21 @@ public sealed record VaultEntryInfo(
     DateTimeOffset ModifiedUtc)
 {
     public string Name => System.IO.Path.GetFileName(Path.Replace('/', System.IO.Path.DirectorySeparatorChar));
+    public string SizeDisplay => FormatBytes(Length);
+    public string ModifiedDisplay => ModifiedUtc.ToLocalTime().ToString("g");
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        return $"{value:0.##} {units[unit]}";
+    }
 }
 
 public sealed class SecureVaultSession : IDisposable
