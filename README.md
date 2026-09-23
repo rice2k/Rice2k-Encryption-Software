@@ -4,6 +4,16 @@
 
 > **Project status:** early development / security-focused preview. Current application version: **0.6.0-preview.4**. Do not use a pre-1.0 build as the only copy of irreplaceable data, recovery material, or private keys.
 
+### Stabilization status
+
+Rice2k is currently in a **feature-stabilization phase**. Major new feature work is paused while build validation, automated security tests, failure/recovery testing, Windows accessibility acceptance, large-file testing, and release packaging are completed.
+
+- [Release readiness checklist](docs/RELEASE-READINESS.md)
+- [Known issues and fixed bugs](docs/KNOWN-ISSUES.md)
+- [Permanent version/release history](docs/RELEASE-HISTORY.md)
+- [Release recording process](docs/RELEASE-PROCESS.md)
+- [Stabilization tracking issue #8](https://github.com/rice2k/Rice2k-Encryption-Software/issues/8)
+
 ## Current development features
 
 ### Beginner-friendly Windows experience
@@ -190,7 +200,7 @@ The source-controlled xUnit suite covers, among other areas:
 
 `tools/Rice2k.VaultBench` provides a repeatable local benchmark/correctness harness for larger vault workloads.
 
-> **Validation limitation:** the current working environment does not contain the .NET SDK. GitHub Actions validation attempts, including the latest retry, have ended before executing any workflow steps, so those runs do not establish either compilation success or source-code failure. The newer tests and v0.6 UI/App Lock/privacy-history/notification changes are committed and source-reviewed but are **not claimed as compiled or executed** here.
+> **Validation limitation:** the current working environment does not contain the .NET SDK. GitHub Actions validation attempts now trigger automatically, but the observed hosted jobs still terminate before a runner is assigned (`runner_id: 0`, zero executed steps). These runs do not establish either compilation success or source-code failure. The current source remains **unvalidated as a complete Windows build**.
 
 ## File formats
 
@@ -211,6 +221,10 @@ Formats may change before 1.0.
 ## Documentation
 
 - [Build / run / test](docs/BUILDING.md)
+- [Release readiness checklist](docs/RELEASE-READINESS.md)
+- [Known issues / bugs / fixes](docs/KNOWN-ISSUES.md)
+- [Release and version history](docs/RELEASE-HISTORY.md)
+- [Release recording process](docs/RELEASE-PROCESS.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Security design](docs/SECURITY-DESIGN.md)
 - [UX specification](docs/UX-SPEC.md)
@@ -222,28 +236,23 @@ Formats may change before 1.0.
 
 ## Build, run, and test
 
-On Windows with the .NET 10 SDK installed:
+The recommended Windows stabilization command is:
 
 ```powershell
-git clone https://github.com/rice2k/Rice2k-Encryption-Software.git
-cd Rice2k-Encryption-Software
-dotnet restore Rice2kEncryption.sln
-dotnet build Rice2kEncryption.sln --configuration Release
-dotnet test .\tests\Rice2k.Tests\Rice2k.Tests.csproj --configuration Release
-dotnet run --project .\src\Rice2k.App\Rice2k.App.csproj
+PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1
 ```
 
-Vault benchmark:
+It records the SDK environment, restore/build/test output, exit codes and a Markdown report under the git-ignored `artifacts\validation\` folder.
 
-```powershell
-dotnet run --project .\tools\Rice2k.VaultBench\Rice2k.VaultBench.csproj -c Release
-```
+Manual commands are documented in [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Remaining work before 1.0
 
 Major release gates still include:
 
-- execute the full test suite on the supported Windows/.NET 10 toolchain;
+- successful complete Windows/.NET 10 Release build;
+- execute the full automated security/regression suite on the supported Windows toolchain;
+- restart/persistence and failure/recovery acceptance tests;
 - large-vault and multi-gigabyte benchmark runs;
 - complete v0.6 Privacy Mode/App Lock/Security Center acceptance testing on Windows;
 - full keyboard/screen-reader/high-contrast/scaling/reduced-motion review;
@@ -251,8 +260,9 @@ Major release gates still include:
 - Advanced Mode and compatibility controls;
 - AES-256-GCM interoperability mode;
 - broader fuzzing/concurrency tests;
-- signed Windows installer, portable release, and signed update path;
-- dedicated security review before stable use is recommended.
+- portable Beta build;
+- signed Windows installer and signed update path;
+- dedicated independent security review before stable use is recommended.
 
 ## License
 
