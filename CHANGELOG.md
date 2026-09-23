@@ -30,8 +30,8 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Safe batch cancellation that keeps completed outputs and cleans the active temporary file.
 - Pause/resume support for single-file and batch encryption/decryption at safe chunk boundaries while keeping cancellation responsive.
 - Five-page first-run welcome tour explaining workflows, source-file safety, passwords, batches, progress, and pre-1.0 limitations.
-- Non-sensitive LocalApplicationData preference storage for onboarding, helpful hints, recovery-health status, and vault auto-lock preferences.
-- Searchable Settings panel with guidance, safety, privacy, and interface-mode sections.
+- Non-sensitive LocalApplicationData preference storage for onboarding, helpful hints, recovery-health status, vault auto-lock, Privacy Mode, clipboard timing, and App Lock trigger preferences.
+- Searchable Settings panel with guidance, safety, privacy, App Lock, and interface-mode sections.
 - Persisted Show Helpful Hints preference and contextual Encrypt/Decrypt tips.
 - Replay Welcome Tour action in Settings.
 - Keyboard shortcuts and screen-reader metadata for primary workflows.
@@ -61,10 +61,11 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Preserved `<vault>.backup` recovery copy during the final atomic replace step.
 - Recovery-backup controls to verify, restore, or move a valid backup aside.
 - Recovery restore preserves the newer active vault as a separate pre-recovery backup rather than deleting it.
+- Vault Recovery Files tooling for `.backup` and interrupted `.pending` artifacts, including cryptographic verification before a pending save may be preserved separately.
 - Detailed Vault Browser progress showing stage, percent, bytes, processing rate, elapsed time, ETA, and current item where measurable.
 - **Cancel safely** support for progress-aware vault add, extract, rename, remove, and verification operations.
 - Vault lock/close lifecycle guards so active operations cannot race unlocked-session disposal.
-- Primary Vault Browser accessibility names and help text.
+- Primary Vault Browser accessibility names, help text, and keyboard lock/search shortcuts.
 - Internal test-only vault mutation checkpoints after pending verification, active replacement, and final verification.
 - Deterministic vault fault-injection regression tests around atomic replacement/recovery behavior.
 - Vault progress/cancellation regression tests including cancellation during a multi-chunk write.
@@ -74,13 +75,28 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Protect Folder regression tests for nested paths, source preservation, existing destinations, self-inclusion, empty folders, and cancellation cleanup.
 - `Rice2k.VaultBench` local benchmark/correctness harness for configurable vault add, verification, extraction, throughput, and SHA-256 restore validation.
 - `docs/VAULT-BENCHMARKING.md` with repeatable benchmark instructions and multi-gigabyte/many-file release-gate workload matrix.
-- Development format documentation for `.r2kenc`, `.r2kkey`, `.r2krecovery`, and `.r2kvault`.
+- **Rice2k identities** with encrypted `.r2kid` private packages and self-signed `.r2kpub` public identity cards.
+- Human-readable combined encryption/signing key fingerprints and explicit independent-fingerprint comparison guidance.
+- Reusable Public Identity Contacts that preserve and revalidate original `.r2kpub` cards.
+- `R2KENC03` one/multi-recipient file encryption using sealed-box content-key wrapping and XChaCha20-Poly1305 file contents.
+- Detached `.r2ksig` Ed25519 signatures with SHA-512 file-match verification and optional trusted `.r2kpub` comparison.
+- Source-controlled identity, recipient-encryption, signature, and contact-store regression tests.
+- **Privacy Mode** quick toggle with optional session-activity hiding and transient-preview clearing.
+- Configurable protected clipboard auto-clear: Never / 15 / 30 / 60 / 120 seconds plus Clear Clipboard Now.
+- App-wide clipboard generation and exact-value checks so older Rice2k timers do not intentionally erase newer clipboard content.
+- Protected clipboard behavior for generated passwords, text output, checksums, identity fingerprints, recipient fingerprints, and saved-contact fingerprints.
+- **Authenticated App Lock** with a separate versioned Argon2id verifier record; the raw App Lock password is not persisted.
+- App Lock startup authentication, manual Lock Rice2k action, optional lock-on-minimize, optional Windows session-lock trigger, and configurable inactivity locking.
+- App Lock lock screen with asynchronous password verification, failed-attempt throttling, explicit Exit action, and no close-button bypass.
+- App Lock transient-preview/clipboard clearing before lock and visual blanking of existing Rice2k windows while preserving modal dialog lifecycle.
+- Source-controlled App Lock credential tests for correct/wrong password behavior, removal, verifier modification, minimum password policy, and hostile Argon2 parameters.
+- Development format documentation for `.r2kenc`, `.r2kkey`, `.r2krecovery`, `.r2kvault`, identities, recipient encryption, and signatures.
 - xUnit v3 security/regression test project included in the solution.
 
 ### Changed
 
-- Windows application development version advanced to `0.4.0-preview.2`.
-- Main status bar now reads the assembly informational version instead of relying on a hard-coded old development label.
+- Windows application development version advanced to `0.6.0-preview.2`.
+- Main status bar reads the assembly informational version instead of relying on a hard-coded old development label.
 - Encrypt/Decrypt screens hide cryptographic details behind recommended defaults instead of exposing them as required choices.
 - Encrypt offers **Password only** and **Password + Rice2k key file** without changing existing password-only files.
 - Decrypt automatically distinguishes password-only `R2KENC01` containers from password + key-file `R2KENC02` containers.
@@ -90,8 +106,10 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Recovery Center exposes package creation, testing, and restore workflows instead of a placeholder card.
 - Secure Vault exposes operational **Protect Folder** and **Open Secure Vault** entry points instead of a placeholder card.
 - Vault auto-lock now uses persisted user-selectable timing while older settings files safely fall back to enabled / 10 minutes.
-- `docs/ROADMAP.md` was brought in sync with features already implemented in source and now separates implemented functionality from unexecuted release gates.
-- `docs/R2KVAULT-FORMAT.md` now documents detailed progress, cancellation semantics, recovery controls, configurable auto-lock, and fault-injection coverage.
+- Settings Privacy controls now expose operational Privacy Mode, clipboard protection, and authenticated App Lock configuration instead of placeholders.
+- Rice2k now references `Microsoft.Win32.SystemEvents` on .NET 10 for Windows session-lock notifications.
+- `docs/ROADMAP.md` separates implemented functionality from unexecuted release gates.
+- `docs/SECURITY-DESIGN.md` documents vault recovery, identity trust boundaries, protected clipboard semantics, and the App Lock threat model.
 - GitHub validation workflow builds and runs the security test project when manually dispatched and a hosted runner is available.
 
 ### Security
@@ -103,18 +121,17 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Cancelled encryption/decryption removes incomplete temporary output.
 - Encryption requires password confirmation before an operation can begin.
 - Batch encryption performs preflight checks per item and preserves completed outputs if later items fail or are cancelled.
-- `.r2kenc` parsers cap unauthenticated KDF, chunk-size, metadata-length, and v2 fingerprint-length values before expensive resource use.
+- `.r2kenc` parsers cap unauthenticated KDF, chunk-size, metadata-length, fingerprint, and recipient/resource values before expensive work.
 - Authenticated metadata is validated for internal consistency before decryption continues.
 - v2 key-file containers bind the required key fingerprint into authenticated metadata/header associated data.
 - The public v2 fingerprint is treated only as a selection hint until authenticated metadata is successfully opened.
 - Password + key-file encryption fails closed unless both the password-derived key and matching key-file secret are present.
 - Text tokens validate size, salt, nonce, and ciphertext structure before decryption.
-- `.r2kkey` and `.r2krecovery` package parsers bound KDF and ciphertext parameters before expensive work.
-- Key/recovery packages authenticate both encrypted payloads and security-relevant header parameters.
-- Raw symmetric key bytes are not displayed in the normal user interface.
-- In-memory managed keys are cleared when removed or when the Key Manager closes.
-- Workflow copies of key-file secrets and derived keys are cleared on a best-effort basis after use.
-- Recovery tests clear the temporary recovered key after fingerprint verification.
+- `.r2kkey`, `.r2krecovery`, and `.r2kid` package parsers bound KDF/ciphertext parameters before expensive work.
+- Key/recovery/private-identity packages authenticate encrypted payloads and security-relevant header parameters.
+- Raw symmetric/private key bytes are not displayed in the normal user interface.
+- In-memory managed/private keys are cleared on a best-effort basis when removed or their manager closes.
+- Recovery tests clear temporary recovered key material after fingerprint verification.
 - Vault passwords are not persisted by the vault service; unlocked sessions retain only a derived content-key copy until lock/disposal.
 - Vault manifests keep filenames and metadata encrypted at rest.
 - Vault chunk authentication binds the stable vault header, random entry ID, and sequential chunk index.
@@ -125,5 +142,9 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Manual vault locking is blocked while an operation is active; close requests request safe cancellation before session disposal when possible.
 - Protect Folder rejects placing its output inside the source folder to prevent recursive self-inclusion and never deletes source-folder data.
 - A cancelled/failed Protect Folder operation removes only its own newly-created empty output when no authenticated folder data or recovery backup exists.
-- Vault parser tests explicitly exercise resource limits before expensive KDF/allocation behavior.
-- Security tests cover round trips, wrong passwords, wrong keys, tampering, truncation, resource-limit rejection, overwrite protection, password policy, cancellation cleanup, key packages, key-file containers, recovery packages, vault lifecycle/recovery behavior, fault-injection checkpoints, and folder protection.
+- Public identity self-signatures are not described as proof of real-world identity; fingerprints must be independently compared when identity matters.
+- Recipient encryption and digital signatures remain separate so confidentiality is not mislabeled as sender authentication.
+- Protected clipboard clearing checks both app-wide generation and exact current clipboard value before clearing.
+- App Lock stores only a salted Argon2id-based verifier record, bounds its KDF parameters before expensive work, and uses fixed-time verifier comparison.
+- App Lock is explicitly scoped as a same-application privacy barrier, not protection against an attacker already controlling the Windows account or local Rice2k files.
+- Security tests cover round trips, wrong passwords/keys/recipients, tampering, truncation, resource-limit rejection, overwrite protection, cancellation cleanup, vault recovery/fault injection, identities, signatures, contacts, and App Lock credential behavior.
