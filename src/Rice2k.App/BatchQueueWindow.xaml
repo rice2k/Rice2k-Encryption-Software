@@ -87,7 +87,7 @@
                     <ProgressBar x:Name="BatchOverallProgress" Minimum="0" Maximum="100" Value="0" Margin="0,7,0,5" />
                     <TextBlock x:Name="BatchProgressDetails" Text="Add files to begin." Foreground="{StaticResource MutedTextBrush}" FontSize="12" TextWrapping="Wrap" />
                     <Border Background="#0D1728" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,14,0,0">
-                        <TextBlock Text="Rice2k processes files sequentially so status and failures stay easy to understand. Completed outputs remain intact if a later item fails or the queue is cancelled." TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+                        <TextBlock Text="Rice2k processes files sequentially so status and failures stay easy to understand. Completed outputs remain intact if a later item fails or the queue is paused or cancelled." TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
                     </Border>
                 </StackPanel>
             </Border>
@@ -95,8 +95,9 @@
 
         <Grid Grid.Row="3" Margin="0,16,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock Text="Tip: drag files or folders onto this window. Folder intake skips junction/reparse directories to avoid recursive loops." Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" FontSize="12" />
+            <TextBlock Text="Tip: drag files or folders onto this window. Pause takes effect at a safe chunk boundary; Cancel remains available while paused." Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" FontSize="12" />
             <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button x:Name="PauseBatchButton" Content="Pause" Click="PauseBatch_Click" IsEnabled="False" Style="{StaticResource SecondaryButtonStyle}" MinWidth="100" />
                 <Button x:Name="CancelBatchButton" Content="Cancel safely" Click="CancelBatch_Click" IsEnabled="False" Style="{StaticResource SecondaryButtonStyle}" />
                 <Button x:Name="StartBatchButton" Content="🔒 Start batch" Click="StartBatch_Click" MinWidth="145" />
             </StackPanel>
