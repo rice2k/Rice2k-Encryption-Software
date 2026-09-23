@@ -6,5 +6,6 @@ public partial class BatchQueueWindow
     {
         base.OnSourceInitialized(e);
         Closing += Window_Closing;
+        InitializePauseUi();
     }
 }
