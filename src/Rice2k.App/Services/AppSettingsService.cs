@@ -14,7 +14,10 @@ public sealed record Rice2kAppSettings(
     int ClipboardAutoClearSeconds = 30,
     bool HideActivityInPrivacyMode = true,
     bool ClearSensitivePreviewsWhenPrivacyModeStarts = true,
-    bool LockOnMinimize = false);
+    bool AppLockEnabled = false,
+    bool LockOnMinimize = false,
+    bool LockOnWindowsSessionLock = false,
+    int AppLockInactivityMinutes = 0);
 
 public sealed class AppSettingsService
 {
@@ -95,6 +98,14 @@ public sealed class AppSettingsService
         var clipboardSeconds = settings.ClipboardAutoClearSeconds is 0 or 15 or 30 or 60 or 120
             ? settings.ClipboardAutoClearSeconds
             : 30;
-        return settings with { ClipboardAutoClearSeconds = clipboardSeconds };
+        var appLockMinutes = settings.AppLockInactivityMinutes is 0 or 1 or 5 or 10 or 15 or 30
+            ? settings.AppLockInactivityMinutes
+            : 0;
+
+        return settings with
+        {
+            ClipboardAutoClearSeconds = clipboardSeconds,
+            AppLockInactivityMinutes = appLockMinutes
+        };
     }
 }
