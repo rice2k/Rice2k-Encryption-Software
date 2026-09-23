@@ -145,7 +145,7 @@ This document tracks implementation status and the remaining release gates. A ch
 - [x] Basic offline/local status indicator
 - [x] Reduced-motion preference used by App Lock verification progress and persisted in local settings
 - [ ] Additional user-selectable theme modes beyond automatic Windows High Contrast adaptation
-- [ ] Windows notifications
+- [x] Privacy-safe generic Windows completion notifications with a persisted on/off preference; suppressed during Privacy Mode
 - [ ] Full keyboard-only encryption/decryption acceptance pass
 - [ ] Full screen-reader/high-contrast/text-scaling/reduced-motion review
 - [ ] Execute the v0.6 privacy/app-lock regression suite on supported Windows/.NET 10
