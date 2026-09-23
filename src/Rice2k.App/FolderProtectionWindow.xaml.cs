@@ -99,6 +99,13 @@ public partial class FolderProtectionWindow : Window
             return;
         }
 
+        // Capture once before the first await, then clear the visible password fields.
+        // This prevents later workflow stages from depending on mutable UI state and
+        // reduces how long the secret remains visible in WPF control storage.
+        var password = PasswordBox.Password;
+        PasswordBox.Clear();
+        ConfirmPasswordBox.Clear();
+
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
         SetBusy(true);
@@ -125,7 +132,7 @@ public partial class FolderProtectionWindow : Window
 
             _stage = null;
             _stageTimer = Stopwatch.StartNew();
-            await _service.ProtectAsync(plan, PasswordBox.Password, progress, token);
+            await _service.ProtectAsync(plan, password, progress, token);
 
             token.ThrowIfCancellationRequested();
             _completedPath = plan.DestinationPath;
@@ -154,6 +161,7 @@ public partial class FolderProtectionWindow : Window
         }
         finally
         {
+            password = string.Empty;
             PasswordBox.Clear();
             ConfirmPasswordBox.Clear();
             SetBusy(false);
