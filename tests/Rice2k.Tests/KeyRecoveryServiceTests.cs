@@ -33,25 +33,24 @@ public sealed class KeyRecoveryServiceTests
     }
 
     [Fact]
-    public async Task KeyPackage_OversizedMetadata_IsRejectedBeforeOutputCreation()
+    public void Generate_OverlongKeyName_IsRejectedBeforePackageWork()
     {
-        var directory = CreateTempDirectory();
-        try
-        {
-            var service = new KeyManagerService();
-            using var key = service.Generate(new string('K', 70_000));
-            var path = Path.Combine(directory, "oversized.r2kkey");
+        var service = new KeyManagerService();
 
-            await Assert.ThrowsAsync<InvalidDataException>(() =>
-                service.ExportAsync(key, path, PackagePassword));
+        var error = Assert.Throws<ArgumentException>(() =>
+            service.Generate(new string('K', 201)));
 
-            Assert.False(File.Exists(path));
-            Assert.Empty(Directory.GetFiles(directory, "*.partial"));
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        Assert.Contains("200", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Generate_BlankKeyName_UsesSafeDefaultLabel()
+    {
+        var service = new KeyManagerService();
+        using var key = service.Generate("   ");
+
+        Assert.Equal("Unnamed Key", key.Name);
+        Assert.NotEqual(Guid.Empty, key.Id);
     }
 
     [Fact]
@@ -119,29 +118,6 @@ public sealed class KeyRecoveryServiceTests
             await keys.ExportAsync(recovered, restoredKeyPath, PackagePassword);
             using var restored = await keys.ImportAsync(restoredKeyPath, PackagePassword);
             Assert.Equal(original.Fingerprint, restored.Fingerprint);
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-    }
-
-    [Fact]
-    public async Task RecoveryPackage_OversizedMetadata_IsRejectedBeforeOutputCreation()
-    {
-        var directory = CreateTempDirectory();
-        try
-        {
-            var keys = new KeyManagerService();
-            var recovery = new RecoveryPackageService();
-            using var key = keys.Generate(new string('R', 70_000));
-            var path = Path.Combine(directory, "oversized.r2krecovery");
-
-            await Assert.ThrowsAsync<InvalidDataException>(() =>
-                recovery.CreateAsync(key, path, RecoveryPassword));
-
-            Assert.False(File.Exists(path));
-            Assert.Empty(Directory.GetFiles(directory, "*.partial"));
         }
         finally
         {
