@@ -19,6 +19,11 @@ public sealed class FileEncryptionService
     private const int DefaultChunkSize = 4 * 1024 * 1024;
     private const int SaltSize = 16;
     private const int NonceSize = 24;
+    private const int MinimumEncryptionPasswordLength = 12;
+    private const long MaximumSupportedOpsLimit = 10;
+    private const int MaximumSupportedMemLimit = 256 * 1024 * 1024;
+    private const int MaximumSupportedChunkSize = 64 * 1024 * 1024;
+    private const int MaximumMetadataCipherLength = 64 * 1024;
 
     private sealed record FileMetadata(
         string OriginalName,
@@ -44,13 +49,10 @@ public sealed class FileEncryptionService
         CancellationToken cancellationToken = default,
         bool verifyAfterEncrypt = true)
     {
-        ValidateSourceAndDestination(sourcePath, destinationPath, password);
+        ValidateSourceAndDestination(sourcePath, destinationPath, password, requireStrongPassword: true);
 
         var sourceInfo = new FileInfo(sourcePath);
-        var tempPath = destinationPath + ".partial";
-        if (File.Exists(tempPath))
-            File.Delete(tempPath);
-
+        var tempPath = CreateUniqueTempPath(destinationPath);
         byte[]? key = null;
         var passwordBytes = Encoding.UTF8.GetBytes(password);
         var stopwatch = Stopwatch.StartNew();
@@ -190,11 +192,9 @@ public sealed class FileEncryptionService
         IProgress<CryptoProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        ValidateSourceAndDestination(sourcePath, destinationPath, password);
+        ValidateSourceAndDestination(sourcePath, destinationPath, password, requireStrongPassword: false);
 
-        var tempPath = destinationPath + ".partial";
-        if (File.Exists(tempPath))
-            File.Delete(tempPath);
+        var tempPath = CreateUniqueTempPath(destinationPath);
 
         try
         {
@@ -258,7 +258,16 @@ public sealed class FileEncryptionService
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
             using var reader = new BinaryReader(input, Encoding.UTF8, leaveOpen: true);
 
-            var header = ReadHeader(reader);
+            Header header;
+            try
+            {
+                header = ReadHeader(reader);
+            }
+            catch (EndOfStreamException ex)
+            {
+                throw new InvalidDataException("The encrypted file header is truncated.", ex);
+            }
+
             key = DeriveKey(passwordBytes, header.Salt, header.OpsLimit, header.MemLimit);
 
             FileMetadata metadata;
@@ -285,9 +294,12 @@ public sealed class FileEncryptionService
                     "Rice2k could not authenticate this file. The password may be wrong, or the encrypted file may have been modified.",
                     ex);
             }
+            catch (JsonException ex)
+            {
+                throw new InvalidDataException("The encrypted file metadata is invalid.", ex);
+            }
 
-            if (metadata.ChunkSize <= 0 || metadata.ChunkCount < 0 || metadata.OriginalLength < 0)
-                throw new InvalidDataException("The encrypted file metadata is invalid.");
+            ValidateMetadata(metadata, header);
 
             long expectedIndex = 0;
             long written = 0;
@@ -403,11 +415,11 @@ public sealed class FileEncryptionService
         var memLimit = reader.ReadInt32();
         var chunkSize = reader.ReadInt32();
 
-        if (opsLimit < 3 || opsLimit > 20)
+        if (opsLimit < 3 || opsLimit > MaximumSupportedOpsLimit)
             throw new InvalidDataException("The Argon2id operation limit is outside the supported range.");
-        if (memLimit < 8 * 1024 * 1024 || memLimit > 1024 * 1024 * 1024)
+        if (memLimit < 8 * 1024 * 1024 || memLimit > MaximumSupportedMemLimit)
             throw new InvalidDataException("The Argon2id memory limit is outside the supported range.");
-        if (chunkSize < 64 * 1024 || chunkSize > 64 * 1024 * 1024)
+        if (chunkSize < 64 * 1024 || chunkSize > MaximumSupportedChunkSize)
             throw new InvalidDataException("The encrypted file chunk size is outside the supported range.");
 
         var salt = reader.ReadBytes(SaltSize);
@@ -416,7 +428,7 @@ public sealed class FileEncryptionService
             throw new InvalidDataException("The encrypted file header is truncated.");
 
         var metadataCipherLength = reader.ReadInt32();
-        if (metadataCipherLength < 16 || metadataCipherLength > 64 * 1024)
+        if (metadataCipherLength < 16 || metadataCipherLength > MaximumMetadataCipherLength)
             throw new InvalidDataException("The encrypted metadata length is invalid.");
 
         var metadataCipher = reader.ReadBytes(metadataCipherLength);
@@ -432,6 +444,23 @@ public sealed class FileEncryptionService
             metadataNonce,
             metadataCipher,
             headerAuth);
+    }
+
+    private static void ValidateMetadata(FileMetadata metadata, Header header)
+    {
+        if (string.IsNullOrWhiteSpace(metadata.OriginalName))
+            throw new InvalidDataException("The encrypted file metadata does not contain an original filename.");
+        if (metadata.OriginalLength < 0 || metadata.ChunkCount < 0)
+            throw new InvalidDataException("The encrypted file metadata contains invalid lengths.");
+        if (metadata.ChunkSize != header.ChunkSize)
+            throw new InvalidDataException("The encrypted file metadata does not match its authenticated header.");
+
+        var expectedChunkCount = metadata.OriginalLength == 0
+            ? 0
+            : (metadata.OriginalLength + metadata.ChunkSize - 1) / metadata.ChunkSize;
+
+        if (metadata.ChunkCount != expectedChunkCount)
+            throw new InvalidDataException("The encrypted file metadata contains an inconsistent chunk count.");
     }
 
     private static byte[] DeriveKey(byte[] passwordBytes, byte[] salt, long opsLimit, int memLimit)
@@ -478,17 +507,41 @@ public sealed class FileEncryptionService
         return aad;
     }
 
-    private static void ValidateSourceAndDestination(string sourcePath, string destinationPath, string password)
+    private static void ValidateSourceAndDestination(
+        string sourcePath,
+        string destinationPath,
+        string password,
+        bool requireStrongPassword)
     {
         if (!File.Exists(sourcePath))
             throw new FileNotFoundException("The source file could not be found.", sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
+        if (requireStrongPassword && password.Length < MinimumEncryptionPasswordLength)
+            throw new ArgumentException($"Encryption passwords must contain at least {MinimumEncryptionPasswordLength} characters.", nameof(password));
+
         if (string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
             throw new IOException("Source and destination must be different files.");
         if (File.Exists(destinationPath))
             throw new IOException("The destination file already exists. Rice2k will not overwrite it automatically.");
+    }
+
+    private static string CreateUniqueTempPath(string destinationPath)
+    {
+        var directory = Path.GetDirectoryName(Path.GetFullPath(destinationPath))
+            ?? throw new DirectoryNotFoundException("The destination folder could not be determined.");
+        var filename = Path.GetFileName(destinationPath);
+
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            var suffix = Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();
+            var candidate = Path.Combine(directory, $".{filename}.{suffix}.partial");
+            if (!File.Exists(candidate))
+                return candidate;
+        }
+
+        throw new IOException("Rice2k could not allocate a unique temporary output name. Try the operation again.");
     }
 
     private static void Report(
