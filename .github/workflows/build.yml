@@ -17,6 +17,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  runner_probe:
+    name: Hosted runner probe (Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm hosted runner assignment
+        shell: bash
+        run: |
+          echo "runner.os=${RUNNER_OS}"
+          echo "runner.arch=${RUNNER_ARCH}"
+          uname -a
+
   validate:
     name: Windows .NET 10 build and tests
     runs-on: windows-latest
