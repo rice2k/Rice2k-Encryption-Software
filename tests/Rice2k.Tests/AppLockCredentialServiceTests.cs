@@ -69,7 +69,7 @@ public sealed class AppLockCredentialServiceTests
     }
 
     [Fact]
-    public void HostileArgonParameters_AreRejectedBeforeKdf()
+    public void HostileArgonOperations_AreRejectedBeforeKdf()
     {
         using var temp = new TempDirectory();
         var path = temp.PathFor("app-lock.json");
@@ -82,6 +82,78 @@ public sealed class AppLockCredentialServiceTests
 
         Assert.False(service.IsConfigured());
         Assert.Throws<InvalidDataException>(() => service.Verify("parameter validation password"));
+    }
+
+    [Fact]
+    public void HostileArgonMemory_AreRejectedBeforeKdf()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.PathFor("app-lock.json");
+        var service = new AppLockCredentialService(path);
+        service.SetPassword("memory parameter validation password");
+
+        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        root["MemLimit"] = int.MaxValue;
+        File.WriteAllText(path, root.ToJsonString());
+
+        Assert.False(service.IsConfigured());
+        Assert.Throws<InvalidDataException>(() => service.Verify("memory parameter validation password"));
+    }
+
+    [Fact]
+    public void UnsupportedVersion_IsRejected()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.PathFor("app-lock.json");
+        var service = new AppLockCredentialService(path);
+        service.SetPassword("unsupported version password");
+
+        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        root["Version"] = 999;
+        File.WriteAllText(path, root.ToJsonString());
+
+        Assert.False(service.IsConfigured());
+        Assert.Throws<NotSupportedException>(() => service.Verify("unsupported version password"));
+    }
+
+    [Fact]
+    public void MalformedJson_IsRejected()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.PathFor("app-lock.json");
+        File.WriteAllText(path, "{ not valid json");
+        var service = new AppLockCredentialService(path);
+
+        Assert.False(service.IsConfigured());
+        Assert.Throws<InvalidDataException>(() => service.Verify("any sufficiently long password"));
+    }
+
+    [Fact]
+    public void OversizedCredentialFile_IsRejectedBeforeParsing()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.PathFor("app-lock.json");
+        File.WriteAllBytes(path, new byte[(32 * 1024) + 1]);
+        var service = new AppLockCredentialService(path);
+
+        Assert.False(service.IsConfigured());
+        Assert.Throws<InvalidDataException>(() => service.Verify("any sufficiently long password"));
+    }
+
+    [Fact]
+    public void InvalidSaltLength_IsRejected()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.PathFor("app-lock.json");
+        var service = new AppLockCredentialService(path);
+        service.SetPassword("salt length validation password");
+
+        var root = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        root["SaltBase64"] = Convert.ToBase64String(new byte[8]);
+        File.WriteAllText(path, root.ToJsonString());
+
+        Assert.False(service.IsConfigured());
+        Assert.Throws<InvalidDataException>(() => service.Verify("salt length validation password"));
     }
 
     private sealed class TempDirectory : IDisposable
