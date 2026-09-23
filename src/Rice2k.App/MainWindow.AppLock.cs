@@ -18,6 +18,7 @@ public partial class MainWindow
     private bool _appLockUiInitialized;
     private bool _appLockActive;
     private bool _startupLockChecked;
+    private bool _startupPresentationBlanked;
     private bool _systemEventsSubscribed;
 
     private sealed record WindowPresentationState(
@@ -25,6 +26,27 @@ public partial class MainWindow
         double Opacity,
         bool ShowInTaskbar,
         WindowState WindowState);
+
+    protected override void OnInitialized(EventArgs e)
+    {
+        base.OnInitialized(e);
+
+        try
+        {
+            var settings = _appSettingsService.Load();
+            if (settings.AppLockEnabled && _appLockCredentialService.IsConfigured())
+            {
+                _startupPresentationBlanked = true;
+                Opacity = 0;
+                ShowInTaskbar = false;
+                ShowActivated = false;
+            }
+        }
+        catch
+        {
+            _startupPresentationBlanked = false;
+        }
+    }
 
     private void InitializeAppLockUi()
     {
@@ -109,9 +131,12 @@ public partial class MainWindow
         if (settings.AppLockEnabled && _appLockCredentialService.IsConfigured())
         {
             Dispatcher.BeginInvoke(
-                DispatcherPriority.ApplicationIdle,
+                DispatcherPriority.Loaded,
                 new Action(() => RequestAppLock("Rice2k requires your app-lock password at startup.")));
+            return;
         }
+
+        RestoreStartupPresentation();
     }
 
     private void ManualAppLock_Click(object sender, RoutedEventArgs e) =>
@@ -185,7 +210,10 @@ public partial class MainWindow
         var settings = _appSettingsService.Load();
         ApplyAppLockSettings(settings);
         if (!settings.AppLockEnabled || !_appLockCredentialService.IsConfigured())
+        {
+            RestoreStartupPresentation();
             return;
+        }
 
         _appLockActive = true;
         _lastAppInputUtc = DateTimeOffset.UtcNow;
@@ -211,6 +239,7 @@ public partial class MainWindow
         if (!unlocked || Application.Current.Dispatcher.HasShutdownStarted)
             return;
 
+        RestoreStartupPresentation();
         try
         {
             ShowInTaskbar = true;
@@ -223,6 +252,17 @@ public partial class MainWindow
         {
             // Restoration is best effort; an application shutdown may already be underway.
         }
+    }
+
+    private void RestoreStartupPresentation()
+    {
+        if (!_startupPresentationBlanked)
+            return;
+
+        _startupPresentationBlanked = false;
+        Opacity = 1;
+        ShowInTaskbar = true;
+        ShowActivated = true;
     }
 
     private static void BlankRice2kWindows(List<WindowPresentationState> presentationStates)
