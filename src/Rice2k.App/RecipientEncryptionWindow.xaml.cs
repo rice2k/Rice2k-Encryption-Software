@@ -14,6 +14,7 @@ public partial class RecipientEncryptionWindow : Window
     private readonly ObservableCollection<Rice2kPublicIdentity> _recipients = [];
     private CancellationTokenSource? _cts;
     private bool _busy;
+    private bool _closeWhenFinished;
 
     public RecipientEncryptionWindow()
     {
@@ -244,6 +245,8 @@ public partial class RecipientEncryptionWindow : Window
             return;
         }
 
+        var privateIdentityPassword = PrivateIdentityPasswordBox.Password;
+        PrivateIdentityPasswordBox.Clear();
         BeginOperation(encryptMode: false);
         Rice2kIdentity? identity = null;
         var progress = new Progress<CryptoProgress>(value =>
@@ -254,7 +257,7 @@ public partial class RecipientEncryptionWindow : Window
             DecryptStatusText.Text = "Unlocking private identity…";
             identity = await _identityService.ImportPrivateAsync(
                 PrivateIdentityBox.Text,
-                PrivateIdentityPasswordBox.Password,
+                privateIdentityPassword,
                 _cts!.Token);
 
             await _recipientService.DecryptAsync(
@@ -281,6 +284,7 @@ public partial class RecipientEncryptionWindow : Window
         finally
         {
             identity?.Dispose();
+            privateIdentityPassword = string.Empty;
             PrivateIdentityPasswordBox.Clear();
             EndOperation();
         }
@@ -316,6 +320,12 @@ public partial class RecipientEncryptionWindow : Window
         DecryptCancelButton.Visibility = Visibility.Collapsed;
         _cts?.Dispose();
         _cts = null;
+
+        if (_closeWhenFinished)
+        {
+            _closeWhenFinished = false;
+            Dispatcher.BeginInvoke(new Action(Close));
+        }
     }
 
     private static void UpdateProgress(
@@ -339,8 +349,13 @@ public partial class RecipientEncryptionWindow : Window
     {
         if (!_busy)
             return;
+
         e.Cancel = true;
-        _cts?.Cancel();
+        _closeWhenFinished = true;
+        EncryptCancelButton.IsEnabled = false;
+        DecryptCancelButton.IsEnabled = false;
+        if (_cts is not null && !_cts.IsCancellationRequested)
+            _cts.Cancel();
     }
 
     private static string SuggestRestoredPath(string encryptedPath)
