@@ -62,12 +62,22 @@ public partial class MainWindow
             return;
         }
 
-        if ((modifiers & ModifierKeys.Shift) != 0 && e.Key == Key.P)
+        if ((modifiers & ModifierKeys.Shift) != 0)
         {
-            PrivacyQuickToggle_Click(this, new RoutedEventArgs());
-            SyncPrivacySettingsPanel(_appSettingsService.Load());
-            e.Handled = true;
-            return;
+            if (e.Key == Key.P)
+            {
+                PrivacyQuickToggle_Click(this, new RoutedEventArgs());
+                SyncPrivacySettingsPanel(_appSettingsService.Load());
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.S)
+            {
+                OpenSecurityCenter();
+                e.Handled = true;
+                return;
+            }
         }
 
         switch (e.Key)
@@ -164,7 +174,7 @@ public partial class MainWindow
     {
         MessageBox.Show(
             this,
-            "Keyboard shortcuts\n\nCtrl+H   Command Center\nCtrl+E   Encrypt file\nCtrl+D   Decrypt file\nCtrl+B   Batch Queue\nCtrl+T   Text Encryption\nCtrl+V   Secure Vault\nCtrl+K   Passwords & Keys\nCtrl+I   File Integrity\nCtrl+L   Lock Rice2k\nCtrl+Shift+P   Toggle Privacy Mode\nCtrl+,   Settings / settings search\nF6       Move focus into active page\nShift+F6 Move focus to navigation\nF1       Show this help\n\nUse Tab and Shift+Tab to move through controls. Enter activates the focused button, and Space toggles check boxes.",
+            "Keyboard shortcuts\n\nCtrl+H   Command Center\nCtrl+E   Encrypt file\nCtrl+D   Decrypt file\nCtrl+B   Batch Queue\nCtrl+T   Text Encryption\nCtrl+V   Secure Vault\nCtrl+K   Passwords & Keys\nCtrl+I   File Integrity\nCtrl+L   Lock Rice2k\nCtrl+Shift+P   Toggle Privacy Mode\nCtrl+Shift+S   Security Center\nCtrl+,   Settings / settings search\nF6       Move focus into active page\nShift+F6 Move focus to navigation\nF1       Show this help\n\nUse Tab and Shift+Tab to move through controls. Enter activates the focused button, and Space toggles check boxes.",
             "Rice2k keyboard shortcuts",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
