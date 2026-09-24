@@ -15,6 +15,7 @@ public sealed class AppLockCredentialService
     private const int MaximumSupportedMemLimit = 256 * 1024 * 1024;
     private const int MinimumPasswordLength = 12;
     private const int VerifierLength = 32;
+    private const int MaximumCredentialFileLength = 32 * 1024;
     private static readonly byte[] VerifierDomain = Encoding.ASCII.GetBytes("RICE2K-APP-LOCK-VERIFIER-V1");
 
     private readonly string _credentialPath;
@@ -166,11 +167,11 @@ public sealed class AppLockCredentialService
         StoredCredential stored;
         try
         {
-            var info = new FileInfo(_credentialPath);
-            if (info.Length <= 0 || info.Length > 32 * 1024)
-                throw new InvalidDataException("The Rice2k app-lock credential file has an invalid size.");
-
-            stored = JsonSerializer.Deserialize<StoredCredential>(File.ReadAllText(_credentialPath))
+            var bytes = BoundedFileReader.ReadAllBytes(
+                _credentialPath,
+                MaximumCredentialFileLength,
+                "Rice2k app-lock credential file");
+            stored = JsonSerializer.Deserialize<StoredCredential>(bytes)
                 ?? throw new InvalidDataException("The Rice2k app-lock credential file is empty or malformed.");
         }
         catch (JsonException ex)
