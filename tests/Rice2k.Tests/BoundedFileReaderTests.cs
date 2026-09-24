@@ -5,6 +5,19 @@ namespace Rice2k.Tests;
 public sealed class BoundedFileReaderTests
 {
     [Fact]
+    public void ReadAllBytes_WithinLimit_ReturnsExactContent()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.PathFor("small-sync.bin");
+        var expected = Enumerable.Range(0, 257).Select(value => (byte)(value % 251)).ToArray();
+        File.WriteAllBytes(path, expected);
+
+        var actual = BoundedFileReader.ReadAllBytes(path, 1024, "test file");
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
     public async Task ReadAllBytesAsync_WithinLimit_ReturnsExactContent()
     {
         using var temp = new TempDirectory();
