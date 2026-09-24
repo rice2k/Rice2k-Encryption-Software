@@ -147,18 +147,16 @@ public sealed class FileSignatureService
     {
         if (!File.Exists(sourcePath))
             throw new FileNotFoundException("The file to verify could not be found.", sourcePath);
-        if (!File.Exists(signaturePath))
-            throw new FileNotFoundException("The .r2ksig file could not be found.", signaturePath);
-
-        var sigInfo = new FileInfo(signaturePath);
-        if (sigInfo.Length <= 0 || sigInfo.Length > MaximumSignatureFileLength)
-            throw new InvalidDataException("The Rice2k signature file has an invalid size.");
 
         SignatureDocument document;
         try
         {
-            var json = await File.ReadAllTextAsync(signaturePath, cancellationToken);
-            document = JsonSerializer.Deserialize<SignatureDocument>(json)
+            var documentBytes = await BoundedFileReader.ReadAllBytesAsync(
+                signaturePath,
+                MaximumSignatureFileLength,
+                "Rice2k signature file",
+                cancellationToken);
+            document = JsonSerializer.Deserialize<SignatureDocument>(documentBytes)
                 ?? throw new InvalidDataException("The Rice2k signature file is empty or malformed.");
         }
         catch (JsonException ex)
