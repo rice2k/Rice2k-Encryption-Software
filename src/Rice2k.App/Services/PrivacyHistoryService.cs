@@ -15,7 +15,7 @@ public sealed class PrivacyHistoryService
 {
     private const int MaxRecentFiles = 20;
     private const int MaxActivityEntries = 500;
-    private const long MaxHistoryFileBytes = 2 * 1024 * 1024;
+    private const int MaxHistoryFileBytes = 2 * 1024 * 1024;
 
     private readonly string _directory;
     private readonly string _recentPath;
@@ -124,12 +124,11 @@ public sealed class PrivacyHistoryService
             if (!File.Exists(path))
                 return Array.Empty<T>();
 
-            var info = new FileInfo(path);
-            if (info.Length <= 0 || info.Length > MaxHistoryFileBytes)
-                return Array.Empty<T>();
-
-            using var stream = File.OpenRead(path);
-            var entries = JsonSerializer.Deserialize<List<T>>(stream) ?? new List<T>();
+            var bytes = BoundedFileReader.ReadAllBytes(
+                path,
+                MaxHistoryFileBytes,
+                "Rice2k history file");
+            var entries = JsonSerializer.Deserialize<List<T>>(bytes) ?? new List<T>();
             return entries.Take(maximumEntries).ToArray();
         }
         catch
