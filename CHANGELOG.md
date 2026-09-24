@@ -69,7 +69,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Internal test-only vault mutation checkpoints after pending verification, active replacement, and final verification.
 - Deterministic vault fault-injection regression tests around atomic replacement/recovery behavior.
 - Vault progress/cancellation regression tests including cancellation during a multi-chunk write.
-- Vault parser safety tests covering unsupported versions, hostile Argon2 parameters, oversized chunks/manifests/records, and truncated headers.
+- Vault parser safety tests covering unsupported versions, hostile Argon2 parameters, oversized chunks/manifests/records, truncated headers, and empty vault identifiers.
 - **One-click Protect Folder** workflow on the main Vault page.
 - Protect Folder planning that rejects self-inclusion, checks available destination space, preserves relative paths, skips inaccessible/reparse content, reports detailed progress, and uses the standard `.r2kvault` format.
 - Protect Folder regression tests for nested paths, source preservation, existing destinations, self-inclusion, empty folders, and cancellation cleanup.
@@ -83,6 +83,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Source-controlled identity, recipient-encryption, signature, and contact-store regression tests.
 - Source-controlled recipient-metadata regression tests for fingerprint/public-key consistency, fingerprint length, duplicate recipient IDs, and rejection cleanup.
 - Source-controlled signature finalization regression coverage for bounded output and pre-cancelled cleanup.
+- Source-controlled `.r2kenc` v1/v2/v3 parser regressions for oversized metadata-length headers.
 - **Privacy Mode** quick toggle with optional session-activity hiding and transient-preview clearing.
 - Configurable protected clipboard auto-clear: Never / 15 / 30 / 60 / 120 seconds plus Clear Clipboard Now.
 - App-wide clipboard generation and exact-value checks so older Rice2k timers do not intentionally erase newer clipboard content.
@@ -121,6 +122,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Recipient Encryption preserves close intent during active work and makes recipient-card import/container inspection cancellation-aware.
 - Recipient encryption validates caller-supplied public identities by recomputing fingerprints from their public keys, bounds fingerprint/metadata size, and rejects duplicate recipient IDs as well as duplicate fingerprints before output creation.
 - Detached-signature writing now enforces the same document limits as verification, serializes to bounded UTF-8 output, flushes temporary output before finalization, and preserves no-overwrite/cancellation cleanup behavior.
+- `.r2kenc` v1/v2/v3 and secure-vault chunk-count calculations now use overflow-safe ceiling division; file/recipient metadata writers enforce reader-compatible size/name limits, and vault manifest writing enforces the reader's 16 MiB ciphertext ceiling.
 - Public Contacts and Secure Vault preserve close intent while asynchronous cleanup completes.
 - Privacy Mode reports clipboard/stored-history cleanup failure instead of silently implying cleanup succeeded.
 - Manual **Clear Clipboard Now** invalidates older Rice2k auto-clear timers through the protected clipboard generation model.
@@ -160,6 +162,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Batch encryption performs preflight checks per item and preserves completed outputs if later items fail or are cancelled.
 - `.r2kenc` parsers cap unauthenticated KDF, chunk-size, metadata-length, fingerprint, and recipient/resource values before expensive work.
 - Authenticated metadata is validated for internal consistency before decryption continues.
+- Chunk-count validation/writing uses overflow-safe arithmetic across `.r2kenc` v1/v2/v3 and secure-vault entries, preventing authenticated near-`long.MaxValue` lengths from wrapping ceiling-division math.
 - `R2KENC03` creation validates recipient fingerprint/public-key consistency, duplicate IDs/fingerprints, and writer-side authenticated-metadata size before content encryption/finalization.
 - v2 key-file containers bind the required key fingerprint into authenticated metadata/header associated data.
 - The public v2 fingerprint is treated only as a selection hint until authenticated metadata is successfully opened.
@@ -174,6 +177,7 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Recovery tests clear temporary recovered key material after fingerprint verification.
 - Vault passwords are not persisted by the vault service; unlocked sessions retain only a derived content-key copy until lock/disposal.
 - Vault manifests keep filenames and metadata encrypted at rest.
+- Vault manifest/header/record validation rejects empty vault or entry identifiers, missing entry lists, oversized manifest output, and inconsistent record mappings before protected data is accepted.
 - Vault chunk authentication binds the stable vault header, random entry ID, and sequential chunk index.
 - Vault mutations fully authenticate the current state before rewriting and fully authenticate pending/final states before releasing recovery data.
 - A pre-existing vault recovery backup blocks later mutation so possible recovery data is not silently overwritten.
