@@ -42,6 +42,30 @@ public sealed class AppSettingsServiceTests
     }
 
     [Fact]
+    public void SavedSettings_AreReloadedByFreshServiceAndIgnoreStaleTempFile()
+    {
+        using var temp = new TempDirectory();
+        var first = new AppSettingsService(temp.DirectoryPath);
+        Assert.True(first.TrySave(new Rice2kAppSettings(
+            FirstRunTourCompleted: true,
+            ShowHelpfulHints: false,
+            PrivacyModeEnabled: true,
+            ClipboardAutoClearSeconds: 120,
+            AppLockInactivityMinutes: 15)));
+
+        File.WriteAllText(temp.PathFor("settings.interrupted.tmp"), "{ incomplete replacement");
+
+        var restarted = new AppSettingsService(temp.DirectoryPath);
+        var loaded = restarted.Load();
+
+        Assert.True(loaded.FirstRunTourCompleted);
+        Assert.False(loaded.ShowHelpfulHints);
+        Assert.True(loaded.PrivacyModeEnabled);
+        Assert.Equal(120, loaded.ClipboardAutoClearSeconds);
+        Assert.Equal(15, loaded.AppLockInactivityMinutes);
+    }
+
+    [Fact]
     public void Load_MalformedJson_ReturnsSafeDefaults()
     {
         using var temp = new TempDirectory();
