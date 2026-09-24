@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Rice2k.Encryption.Services;
 
@@ -97,6 +98,34 @@ public sealed class RecipientFileEncryptionServiceTests
         await Assert.ThrowsAsync<CryptographicException>(() =>
             service.DecryptAsync(encrypted, restored, alice));
         Assert.False(File.Exists(restored));
+    }
+
+    [Fact]
+    public async Task Inspect_ExcessiveMetadataCipherLength_IsRejectedBeforeRead()
+    {
+        using var temp = new TempDirectory();
+        var identities = new IdentityService();
+        var service = new RecipientFileEncryptionService();
+        using var alice = identities.Generate("Alice");
+        var source = temp.PathFor("metadata-length.txt");
+        var encrypted = temp.PathFor("metadata-length.txt.r2kenc");
+        await File.WriteAllTextAsync(source, "metadata length parser test");
+        await service.EncryptForRecipientAsync(source, encrypted, alice.ToPublicIdentity(), verifyAfterEncrypt: false);
+
+        var bytes = await File.ReadAllBytesAsync(encrypted);
+        const int firstWrappedKeyLengthOffset = 8 + 1 + 1 + 1 + sizeof(int) + sizeof(int);
+        var wrappedKeyLength = BinaryPrimitives.ReadInt32LittleEndian(
+            bytes.AsSpan(firstWrappedKeyLengthOffset, sizeof(int)));
+        var metadataCipherLengthOffset = checked(
+            firstWrappedKeyLengthOffset + sizeof(int) + wrappedKeyLength + 24);
+        BinaryPrimitives.WriteInt32LittleEndian(
+            bytes.AsSpan(metadataCipherLengthOffset, sizeof(int)),
+            int.MaxValue);
+        await File.WriteAllBytesAsync(encrypted, bytes);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => service.InspectAsync(encrypted));
+
+        Assert.Contains("metadata length", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
