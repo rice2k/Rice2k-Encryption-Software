@@ -202,7 +202,7 @@ public sealed class KeyFileEncryptionService
                         await _pauseGate.WaitIfPausedAsync(cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        var read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+                        var read = await ChunkReadHelper.ReadFullChunkAsync(input, buffer.AsMemory(), cancellationToken);
                         if (read == 0)
                             break;
 
