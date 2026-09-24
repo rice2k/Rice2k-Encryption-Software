@@ -232,6 +232,9 @@ public sealed class KeyFileEncryptionService
                     CryptographicOperations.ZeroMemory(buffer);
                 }
 
+                if (processed != sourceInfo.Length || index != chunkCount)
+                    throw new IOException($"'{sourceInfo.Name}' changed while Rice2k was reading it. The partial encrypted output will be discarded.");
+
                 await _pauseGate.WaitIfPausedAsync(cancellationToken);
                 await output.FlushAsync(cancellationToken);
                 output.Flush(flushToDisk: true);
