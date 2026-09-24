@@ -261,6 +261,19 @@ sealed class ConsoleCryptoProgress : IProgress<CryptoProgress>
         if (value.Percentage >= 100)
             Console.WriteLine();
     }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        return $"{value:0.##} {units[unit]}";
+    }
 }
 
 sealed class MemorySampler : IAsyncDisposable
