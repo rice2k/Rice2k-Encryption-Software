@@ -187,7 +187,11 @@ Security Center reports configuration. It does not turn an unexecuted test suite
 The source-controlled xUnit suite covers, among other areas:
 
 - password-only and password + key-file file round trips;
-- wrong passwords/keys, tampering, truncation, overwrite prevention, and cancellation cleanup;
+- empty, one-byte, exact 4 MiB chunk-boundary, and multi-chunk password-only files;
+- wrong passwords/keys, supported-header modification, authenticated-metadata modification, chunk-cipher modification, truncation, clean final-chunk removal, duplicate/reordered chunk indices, and unexpected trailing data;
+- pre-cancelled and mid-operation encryption/decryption cleanup;
+- existing, source-equals-destination, and late destination-collision no-overwrite behavior;
+- oversized metadata-header rejection before expensive key derivation where applicable;
 - `.r2kkey` and `.r2krecovery` round trips and failure cases;
 - vault lifecycle, mutation, recovery-backup, parser-safety, progress, and deterministic fault-injection behavior;
 - one-click folder protection and source-preservation rules;
@@ -198,7 +202,7 @@ The source-controlled xUnit suite covers, among other areas:
 - privacy-history deduplication, action-only redaction, clearing, and oversized-file rejection;
 - App Lock credential round trip, wrong-password rejection, safe removal behavior, verifier modification, minimum-password policy, malformed JSON, unsupported versions, invalid salt length, oversized credential files, and hostile Argon2 operation/memory parameters.
 
-`tools/Rice2k.VaultBench` provides a repeatable local benchmark/correctness harness for larger vault workloads.
+`tools/Rice2k.FileBench` provides a streaming correctness/performance harness for multi-gigabyte `.r2kenc` validation without intentionally loading the entire plaintext into memory. `tools/Rice2k.VaultBench` provides the corresponding larger-workload vault harness.
 
 > **Validation limitation:** a supported Windows/.NET 10 Release build and the full security/regression test suite have not yet completed successfully for the current source. The GitHub Actions validation workflow is manual (`workflow_dispatch`). Prior hosted validation attempts terminated before a runner was assigned (`runner_id: 0`, zero executed steps), which establishes neither compilation success nor source-code failure. Treat the current source as **unvalidated as a complete Windows build** until the build and test gates execute and pass.
 
@@ -232,6 +236,7 @@ Formats may change before 1.0.
 - [R2KKEY / Recovery formats](docs/R2KKEY-RECOVERY-FORMATS.md)
 - [R2KVAULT format](docs/R2KVAULT-FORMAT.md)
 - [Identity / Recipient Encryption / Signatures](docs/R2K-IDENTITY-SHARING-SIGNATURES.md)
+- [Large-file encryption benchmarking](docs/FILE-BENCHMARKING.md)
 - [Vault benchmarking](docs/VAULT-BENCHMARKING.md)
 
 ## Build, run, and test
