@@ -361,17 +361,16 @@ public sealed class IdentityService
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
-        var info = new FileInfo(sourcePath);
-        if (!info.Exists)
-            throw new FileNotFoundException("The selected Rice2k public identity could not be found.", sourcePath);
-        if (info.Length <= 0 || info.Length > MaximumPublicCardLength)
-            throw new InvalidDataException("The public identity card has an invalid size.");
 
         PublicIdentityCard card;
         try
         {
-            var json = await File.ReadAllTextAsync(sourcePath, cancellationToken);
-            card = JsonSerializer.Deserialize<PublicIdentityCard>(json)
+            var cardBytes = await BoundedFileReader.ReadAllBytesAsync(
+                sourcePath,
+                MaximumPublicCardLength,
+                "public identity card",
+                cancellationToken);
+            card = JsonSerializer.Deserialize<PublicIdentityCard>(cardBytes)
                 ?? throw new InvalidDataException("The public identity card is empty or malformed.");
         }
         catch (JsonException ex)
