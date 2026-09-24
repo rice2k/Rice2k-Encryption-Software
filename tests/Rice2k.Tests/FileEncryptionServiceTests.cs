@@ -432,7 +432,7 @@ public sealed class FileEncryptionServiceTests
         using var cts = new CancellationTokenSource();
         var progress = new CallbackProgress<CryptoProgress>(value =>
         {
-            if (value.Stage == "Encrypting" && value.ProcessedBytes > 0)
+            if (value.Stage == "Encrypting" && value.BytesProcessed > 0)
                 cts.Cancel();
         });
 
@@ -463,7 +463,7 @@ public sealed class FileEncryptionServiceTests
         using var cts = new CancellationTokenSource();
         var progress = new CallbackProgress<CryptoProgress>(value =>
         {
-            if (value.Stage == "Decrypting" && value.ProcessedBytes > 0)
+            if (value.Stage == "Decrypting" && value.BytesProcessed > 0)
                 cts.Cancel();
         });
 
