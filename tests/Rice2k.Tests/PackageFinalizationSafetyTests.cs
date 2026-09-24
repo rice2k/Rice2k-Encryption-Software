@@ -24,6 +24,23 @@ public sealed class PackageFinalizationSafetyTests
     }
 
     [Fact]
+    public async Task KeyPackage_ExistingDestination_IsNeverOverwritten()
+    {
+        using var temp = new TempDirectory();
+        var service = new KeyManagerService();
+        using var key = service.Generate("Collision Key");
+        var destination = temp.PathFor("existing.r2kkey");
+        await File.WriteAllTextAsync(destination, "existing key destination");
+        var before = await File.ReadAllBytesAsync(destination);
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            service.ExportAsync(key, destination, Password));
+
+        Assert.Equal(before, await File.ReadAllBytesAsync(destination));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
+    }
+
+    [Fact]
     public async Task RecoveryPackage_PreCancelledCreate_LeavesNoFinalOrPartialOutput()
     {
         using var temp = new TempDirectory();
@@ -38,6 +55,24 @@ public sealed class PackageFinalizationSafetyTests
             service.CreateAsync(key, destination, Password, cts.Token));
 
         Assert.False(File.Exists(destination));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
+    }
+
+    [Fact]
+    public async Task RecoveryPackage_ExistingDestination_IsNeverOverwritten()
+    {
+        using var temp = new TempDirectory();
+        var keys = new KeyManagerService();
+        var service = new RecoveryPackageService();
+        using var key = keys.Generate("Recovery Collision Key");
+        var destination = temp.PathFor("existing.r2krecovery");
+        await File.WriteAllTextAsync(destination, "existing recovery destination");
+        var before = await File.ReadAllBytesAsync(destination);
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            service.CreateAsync(key, destination, Password));
+
+        Assert.Equal(before, await File.ReadAllBytesAsync(destination));
         Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
     }
 
@@ -59,6 +94,23 @@ public sealed class PackageFinalizationSafetyTests
     }
 
     [Fact]
+    public async Task PrivateIdentity_ExistingDestination_IsNeverOverwritten()
+    {
+        using var temp = new TempDirectory();
+        var service = new IdentityService();
+        using var identity = service.Generate("Identity Collision");
+        var destination = temp.PathFor("existing.r2kid");
+        await File.WriteAllTextAsync(destination, "existing private identity destination");
+        var before = await File.ReadAllBytesAsync(destination);
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            service.ExportPrivateAsync(identity, destination, Password));
+
+        Assert.Equal(before, await File.ReadAllBytesAsync(destination));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
+    }
+
+    [Fact]
     public async Task PublicIdentity_PreCancelledExport_LeavesNoFinalOrPartialOutput()
     {
         using var temp = new TempDirectory();
@@ -72,6 +124,23 @@ public sealed class PackageFinalizationSafetyTests
             service.ExportPublicAsync(identity, destination, cts.Token));
 
         Assert.False(File.Exists(destination));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
+    }
+
+    [Fact]
+    public async Task PublicIdentity_ExistingDestination_IsNeverOverwritten()
+    {
+        using var temp = new TempDirectory();
+        var service = new IdentityService();
+        using var identity = service.Generate("Public Identity Collision");
+        var destination = temp.PathFor("existing.r2kpub");
+        await File.WriteAllTextAsync(destination, "existing public identity destination");
+        var before = await File.ReadAllBytesAsync(destination);
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            service.ExportPublicAsync(identity, destination));
+
+        Assert.Equal(before, await File.ReadAllBytesAsync(destination));
         Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
     }
 
