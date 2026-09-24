@@ -70,8 +70,7 @@ public sealed class KeyFileEncryptionService
             if (input.Length < Magic.Length)
                 return false;
 
-            Span<byte> magic = stackalloc byte[Magic.Length];
-            return input.Read(magic) == Magic.Length && magic.SequenceEqual(Magic);
+            return StreamPrefixHelper.StartsWith(input, Magic);
         }
         catch
         {
