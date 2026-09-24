@@ -533,7 +533,7 @@ public sealed partial class SecureVaultService
 
         var chunkCount = sourceInfo.Length == 0
             ? 0
-            : (sourceInfo.Length + header.ChunkSize - 1) / header.ChunkSize;
+            : 1 + ((sourceInfo.Length - 1) / header.ChunkSize);
         var perChunkOverhead = sizeof(long) + sizeof(int) + NonceSize + AuthenticationTagSize;
         var payloadLength = checked(sizeof(long) + sourceInfo.Length + checked(chunkCount * perChunkOverhead));
 
