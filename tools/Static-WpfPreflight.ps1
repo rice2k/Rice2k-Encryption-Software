@@ -122,6 +122,25 @@ else {
     $failures.Add("Rice2k.App.csproj was not found beneath the WPF source root.")
 }
 
+# Security-sensitive chunk counts must not use addition-based ceiling division.
+# A form such as `(length + chunkSize - 1) / chunkSize` can overflow when an
+# authenticated length approaches Int64.MaxValue. The supported implementation
+# uses `length == 0 ? 0 : 1 + ((length - 1) / chunkSize)` instead. Keep this
+# narrowly scoped to service sources and identifiers ending in ChunkSize so the
+# preflight catches this specific regression without policing unrelated math.
+$servicesRoot = Join-Path $SourceRoot 'Services'
+$unsafeChunkCeilingPattern = '(?is)\+\s*[A-Za-z_][A-Za-z0-9_\.]*ChunkSize\s*-\s*1\s*\)\s*/\s*[A-Za-z_][A-Za-z0-9_\.]*ChunkSize'
+if (Test-Path $servicesRoot) {
+    $securityServiceFiles = Get-ChildItem -Path $servicesRoot -Filter '*.cs' -File -Recurse
+    foreach ($serviceFile in $securityServiceFiles) {
+        $checks++
+        $serviceSource = Get-Content -Raw -Path $serviceFile.FullName
+        if ([regex]::IsMatch($serviceSource, $unsafeChunkCeilingPattern)) {
+            $failures.Add("$($serviceFile.Name): unsafe addition-based chunk ceiling division was found. Use overflow-safe `1 + ((length - 1) / chunkSize)` arithmetic after handling zero length.")
+        }
+    }
+}
+
 # Event attributes commonly used by the Rice2k WPF XAML. The preflight only
 # treats identifier-shaped values as code-behind handlers.
 $eventNames = @(
@@ -255,5 +274,5 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 
-Write-Host 'STATIC PREFLIGHT PASSED: project namespace isolation, XAML handlers, lifecycle overrides, and partial-class method signatures look consistent.' -ForegroundColor Green
+Write-Host 'STATIC PREFLIGHT PASSED: project namespace isolation, XAML handlers, lifecycle overrides, partial-class method signatures, and chunk-count arithmetic guards look consistent.' -ForegroundColor Green
 exit 0
