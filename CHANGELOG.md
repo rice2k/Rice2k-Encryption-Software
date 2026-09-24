@@ -85,6 +85,9 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Source-controlled signature finalization regression coverage for bounded output and pre-cancelled cleanup.
 - Source-controlled `.r2kenc` v1/v2/v3 parser regressions for oversized metadata-length headers.
 - Deterministic short-read stream regression tests for chunk-boundary filling and pre-cancelled reads.
+- Exact-prefix short-read regression tests for lightweight `R2KENC02` format detection.
+- Malformed-header parser matrices with 15 `R2KENC02` and 14 `R2KENC03` hostile/truncated public-header cases derived from valid fixtures.
+- Shared synchronous/asynchronous bounded file reader plus regression tests for exact reads, empty/oversized rejection, and cancellation.
 - **Privacy Mode** quick toggle with optional session-activity hiding and transient-preview clearing.
 - Configurable protected clipboard auto-clear: Never / 15 / 30 / 60 / 120 seconds plus Clear Clipboard Now.
 - App-wide clipboard generation and exact-value checks so older Rice2k timers do not intentionally erase newer clipboard content.
@@ -125,6 +128,9 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Detached-signature writing now enforces the same document limits as verification, serializes to bounded UTF-8 output, flushes temporary output before finalization, and preserves no-overwrite/cancellation cleanup behavior.
 - `.r2kenc` v1/v2/v3 and secure-vault chunk-count calculations now use overflow-safe ceiling division; file/recipient metadata writers enforce reader-compatible size/name limits, and vault manifest writing enforces the reader's 16 MiB ciphertext ceiling.
 - Chunked encryption writers now accumulate repeated short stream reads until a logical chunk buffer is full or true EOF is reached, keeping emitted chunk counts consistent with authenticated source lengths across `.r2kenc` v1/v2/v3 and Secure Vault mutation paths.
+- Lightweight `R2KENC02` detection now reads the complete magic prefix instead of treating one possibly-short synchronous stream read as authoritative.
+- `R2KENC01`, `R2KENC02`, and `R2KENC03` now require the actual bytes/chunks read to match the source length/chunk count captured in authenticated metadata before finalizing, even when optional post-encryption verification is disabled.
+- `.r2kpub`, `.r2ksig`, Settings, App Lock credentials, and optional privacy history now apply their size limit and exact read to the same opened file handle instead of statting one handle/path state and reopening the path for parsing.
 - Public Contacts and Secure Vault preserve close intent while asynchronous cleanup completes.
 - Privacy Mode reports clipboard/stored-history cleanup failure instead of silently implying cleanup succeeded.
 - Manual **Clear Clipboard Now** invalidates older Rice2k auto-clear timers through the protected clipboard generation model.
@@ -166,6 +172,10 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Authenticated metadata is validated for internal consistency before decryption continues.
 - Chunk-count validation/writing uses overflow-safe arithmetic across `.r2kenc` v1/v2/v3 and secure-vault entries, preventing authenticated near-`long.MaxValue` lengths from wrapping ceiling-division math.
 - Chunked writers no longer assume one `ReadAsync` call fills the requested buffer; short reads are coalesced to a full logical chunk or true EOF before chunk indexing/authentication.
+- File-container finalization no longer depends on optional verification to detect a source-length/chunk-count mismatch during encryption; v1/v2/v3 enforce the captured source snapshot invariant before finalization.
+- Lightweight format detection uses exact-prefix semantics, preventing a legal short stream read from misclassifying a valid `R2KENC02` container.
+- Resource ceilings for bounded JSON artifacts/local state are enforced on the same open handle that supplies parsed bytes, with exact-read and post-read length-stability checks.
+- `R2KENC02` and `R2KENC03` malformed-header matrix tests expand rejection coverage for unsupported algorithms/protection profiles, hostile counts/lengths, resource settings, and truncation.
 - `R2KENC03` creation validates recipient fingerprint/public-key consistency, duplicate IDs/fingerprints, and writer-side authenticated-metadata size before content encryption/finalization.
 - v2 key-file containers bind the required key fingerprint into authenticated metadata/header associated data.
 - The public v2 fingerprint is treated only as a selection hint until authenticated metadata is successfully opened.
@@ -200,4 +210,4 @@ All notable changes to Rice2k Encryption Software will be documented here.
 - Lock-screen activation is deferred during credential mutation so the lock dialog never intentionally authenticates against a credential mid-transition.
 - App Lock is explicitly scoped as a same-application privacy barrier, not protection against an attacker already controlling the Windows account or local Rice2k files.
 - Security Center does not display passwords, private keys, plaintext, or recovery secrets and does not convert configuration state into a claim of completed release validation.
-- Security tests cover round trips, wrong passwords/keys/recipients, tampering, truncation, resource-limit rejection, overwrite protection, cancellation cleanup, vault recovery/fault injection, identities, signatures, contacts, App Lock credential behavior, application-settings persistence edge cases, recipient-metadata validation, package-format output limits, and deterministic short-read chunk handling.
+- Security tests cover round trips, wrong passwords/keys/recipients, tampering, truncation, resource-limit rejection, overwrite protection, cancellation cleanup, vault recovery/fault injection, identities, signatures, contacts, App Lock credential behavior, application-settings persistence edge cases, recipient-metadata validation, package-format output limits, deterministic short-read chunk handling, exact-prefix detection, malformed v2/v3 headers, and bounded same-handle file reads.
