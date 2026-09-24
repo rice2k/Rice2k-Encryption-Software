@@ -27,6 +27,23 @@ public sealed class AppLockCredentialServiceTests
     }
 
     [Fact]
+    public void Credential_IsReloadedByFreshServiceAndIgnoresStaleTempFile()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.PathFor("app-lock.json");
+        const string password = "restart persistence app lock password";
+        var first = new AppLockCredentialService(path);
+        first.SetPassword(password);
+
+        File.WriteAllText(path + ".interrupted.tmp", "{ incomplete credential replacement");
+
+        var restarted = new AppLockCredentialService(path);
+        Assert.True(restarted.IsConfigured());
+        Assert.True(restarted.Verify(password));
+        Assert.False(restarted.Verify("different restart persistence password"));
+    }
+
+    [Fact]
     public void SetPassword_ReplacesExistingCredentialAndCleansTemporaryFile()
     {
         using var temp = new TempDirectory();
