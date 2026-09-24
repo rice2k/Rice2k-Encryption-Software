@@ -252,7 +252,9 @@ public sealed partial class SecureVaultService
         if (sourceInfo.Length != addition.Entry.Length)
             throw new IOException($"'{sourceInfo.Name}' changed size after it was selected. Add it again so Rice2k can protect the current version.");
 
-        var chunkCount = sourceInfo.Length == 0 ? 0 : (sourceInfo.Length + header.ChunkSize - 1) / header.ChunkSize;
+        var chunkCount = sourceInfo.Length == 0
+            ? 0
+            : 1 + ((sourceInfo.Length - 1) / header.ChunkSize);
         var perChunkOverhead = sizeof(long) + sizeof(int) + NonceSize + AuthenticationTagSize;
         var payloadLength = checked(sizeof(long) + sourceInfo.Length + checked(chunkCount * perChunkOverhead));
 
