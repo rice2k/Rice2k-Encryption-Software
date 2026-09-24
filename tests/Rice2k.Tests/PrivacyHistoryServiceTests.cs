@@ -22,6 +22,27 @@ public sealed class PrivacyHistoryServiceTests
     }
 
     [Fact]
+    public void StoredHistory_IsReloadedByFreshServiceAndIgnoresStaleTempFile()
+    {
+        using var temp = new TempDirectory();
+        var path = Path.Combine(temp.DirectoryPath, "restart.txt");
+        File.WriteAllText(path, "restart persistence fixture");
+        var first = new PrivacyHistoryService(temp.DirectoryPath);
+
+        Assert.True(first.TryRememberRecentFile(path, "Encrypt source"));
+        Assert.True(first.TryAppendRedactedActivity("Encryption complete   —   restart.txt"));
+        File.WriteAllText(Path.Combine(temp.DirectoryPath, "history.interrupted.tmp"), "{ incomplete history replacement");
+
+        var restarted = new PrivacyHistoryService(temp.DirectoryPath);
+        var recent = Assert.Single(restarted.LoadRecentFiles());
+        var activity = Assert.Single(restarted.LoadActivity());
+
+        Assert.Equal(Path.GetFullPath(path), recent.Path);
+        Assert.Equal("Encrypt source", recent.Purpose);
+        Assert.Equal("Encryption complete", activity.Action);
+    }
+
+    [Fact]
     public void RedactedActivity_DropsDetailsSuchAsFileNames()
     {
         using var temp = new TempDirectory();
