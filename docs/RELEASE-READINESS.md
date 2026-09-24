@@ -27,7 +27,7 @@ dotnet build Rice2kEncryption.sln --configuration Release --no-restore -p:Contin
 dotnet test tests\Rice2k.Tests\Rice2k.Tests.csproj --configuration Release --no-build
 ```
 
-The source preflight checks WPF/WinForms namespace isolation, XAML handler resolution, duplicate XAML-handler definitions, duplicate lifecycle overrides, and duplicate ordinary partial-class methods using canonicalized parameter type/modifier signatures. It is an early fail-fast guard only; the compiler remains authoritative.
+The source preflight checks WPF/WinForms namespace isolation, XAML handler resolution, duplicate XAML-handler definitions, duplicate lifecycle overrides, duplicate ordinary partial-class methods using canonicalized parameter type/modifier signatures, and the known overflow-prone chunk ceiling-division pattern. It is an early fail-fast guard only; the compiler remains authoritative.
 
 Pass criteria:
 - static WPF/source preflight succeeds;
@@ -50,17 +50,25 @@ dotnet test tests/Rice2k.Tests/Rice2k.Tests.csproj --configuration Release --no-
 
 All security/regression tests must pass. See GitHub Issue #6.
 
+Source preparation now includes round trips, corruption/truncation/resource-limit checks, cancellation/no-overwrite behavior, deterministic short-read handling, destination races, malformed `R2KENC01/02/03` header matrices, malformed `.r2kkey`/`.r2krecovery`/private `.r2kid` package matrices, vault fault injection/recovery tests, identity/signature/contact tests, Settings/App Lock/privacy persistence tests, and bounded same-handle file-read tests. **These source files do not satisfy this gate until the supported Windows/.NET 10 test run actually executes and passes.**
+
 ### 3. Restart/round-trip persistence test — **PENDING**
 
 For each supported format, create protected data, close Rice2k, restart it, and successfully recover/verify the data using the intended credentials. Include `.r2kenc` v1/v2/v3, `.r2kkey`, `.r2krecovery`, `.r2kvault`, `.r2kid`, `.r2kpub`, and `.r2ksig` where applicable.
+
+Source-level restart preparation now explicitly constructs fresh service instances to reload committed Settings, App Lock credentials, and optional privacy history, while stale interrupted temp files are ignored. Package round-trip tests also reopen persisted encrypted packages from disk. **The real application close/restart acceptance sequence for every supported format is still required on Windows before this step passes.**
 
 ### 4. Negative/failure testing — **PENDING VALIDATED RUN**
 
 Test wrong passwords, wrong key files, wrong identities, damaged/truncated containers, modified signatures, missing/reordered data, output collisions, cancellation, interrupted writes and recovery artifacts. Source/original data must remain unchanged.
 
+Source-controlled negative coverage has been expanded to include malformed-header/resource matrices for all three `.r2kenc` generations and encrypted key/recovery/private-identity packages, late destination collision tests for password-only file operations, cancellation cleanup, package no-overwrite behavior, source snapshot/chunk-count invariants, Secure Vault recovery/fault injection, and parser limits. **This remains pending until the complete supported Windows test run and manual recovery/interruption acceptance steps execute successfully.**
+
 ### 5. Large-file and large-vault tests — **PENDING**
 
 Run multi-gigabyte streaming tests and the vault benchmark harness. Record peak memory, throughput, failures and recovery behavior.
+
+`tools/Rice2k.FileBench` and `tools/Rice2k.VaultBench` provide source-controlled correctness/throughput harnesses. A file-encryption release-gate run should use at least a 2 GiB source and compare source/restored hashes while recording memory and throughput. The existence of these harnesses does not satisfy this step until the runs are completed and recorded.
 
 ### 6. App Lock/privacy lifecycle acceptance — **PENDING**
 
