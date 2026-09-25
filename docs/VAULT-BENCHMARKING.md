@@ -1,8 +1,8 @@
 # Secure Vault benchmarking
 
-Rice2k Encryption Software includes a small console benchmark project at `tools/Rice2k.VaultBench`.
+Rice2k Encryption Software includes a console benchmark/correctness project at `tools/Rice2k.VaultBench`.
 
-Its purpose is to produce repeatable **local** measurements for `.r2kvault` creation, add/update, full verification, and extraction without inventing performance claims in documentation.
+Its purpose is to produce repeatable **local** measurements for `.r2kvault` creation, add/update, full verification, and extraction without inventing performance claims in documentation. It is also designed to fail closed when source-preservation or restore-correctness checks fail.
 
 ## Requirements
 
@@ -10,7 +10,7 @@ Its purpose is to produce repeatable **local** measurements for `.r2kvault` crea
 - .NET 10 SDK
 - Enough free disk space for the generated plaintext files, active vault, pending vault during mutation, temporary recovery copy during replacement, and extracted correctness sample
 
-Do not run the benchmark in a folder containing important data. The tool creates its own timestamped directory beneath the current user's temporary directory and deletes it at the end unless `--keep` is supplied.
+The harness performs a disk-space preflight before generating the workload. Do not run the benchmark in a folder containing important data. The tool creates its own timestamp + random-suffix directory beneath the current user's temporary directory and deletes it at the end unless `--keep` is supplied.
 
 ## Default run
 
@@ -24,16 +24,50 @@ Default workload:
 - 64 MiB per file
 - 256 MiB total plaintext
 
-The benchmark reports:
+The benchmark now reports and validates:
 
+- Rice2k informational version;
+- UTC start/completion times;
+- OS, .NET runtime, process architecture, and processor count;
 - empty-vault creation time;
 - add + pending/final verification time and plaintext throughput;
+- authenticated manifest entry count and total plaintext bytes;
 - independent full-vault verification time and throughput;
 - first-file extraction time and throughput;
+- SHA-256 equality between the extracted file and its pre-vault source baseline;
+- SHA-256 preservation of **every original source file** after vault operations;
 - final vault size and authenticated sequence number;
-- SHA-256 source/restored equality for the extracted correctness sample.
+- peak managed memory observed by the harness;
+- process peak working set.
 
-## Larger runs
+The harness flushes generated source files to disk before protection work begins. A correctness or source-preservation mismatch throws and causes a non-zero process exit.
+
+## Integrated validation run
+
+`tools/Validate-Rice2k.ps1` can run both large-data harnesses after a successful Release build/test pass:
+
+```powershell
+PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1 -RunBenchmarks
+```
+
+The default integrated benchmark profile is:
+
+- FileBench: 2,048 MiB plaintext
+- VaultBench: 4 files × 512 MiB = 2,048 MiB plaintext
+
+Override the sizes when a different release-gate profile is required:
+
+```powershell
+PowerShell -ExecutionPolicy Bypass -File .\tools\Validate-Rice2k.ps1 `
+  -RunBenchmarks `
+  -FileBenchmarkMb 4096 `
+  -VaultBenchmarkFileSizeMb 1024 `
+  -VaultBenchmarkFiles 8
+```
+
+The validator captures FileBench and VaultBench console output in the same timestamped `artifacts\validation\...` folder as the build/test logs. Benchmark failures make that validation attempt fail. When `-RunBenchmarks` is omitted, the summary explicitly states that release-readiness Step 5 has **not** been satisfied.
+
+## Larger direct runs
 
 Example 4 GiB plaintext run:
 
@@ -75,9 +109,11 @@ For each run record:
 - .NET SDK/runtime version;
 - workload parameters;
 - add/verify/extract times;
-- observed peak process memory if available;
-- whether correctness checks passed;
+- peak managed memory and process working set;
+- whether source-preservation and restored-content correctness checks passed;
 - whether `.pending` / `.backup` cleanup completed normally.
+
+Some of this information is emitted automatically by the harness; CPU model, installed RAM, storage model/type, filesystem, and commit SHA should still be recorded with the release evidence when they are not present in the captured environment log.
 
 ## Interpreting results
 
