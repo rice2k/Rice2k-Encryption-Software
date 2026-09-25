@@ -86,6 +86,127 @@ public sealed class RestartPersistenceTests
         Assert.True(File.Exists(identityPackage));
     }
 
+    [Fact]
+    public async Task R2kkey_FreshServiceImportsPersistedKeyPackage()
+    {
+        using var temp = new TempDirectory();
+        var package = temp.PathFor("restart-key.r2kkey");
+        Guid keyId;
+        string fingerprint;
+
+        var firstService = new KeyManagerService();
+        using (var key = firstService.Generate("Persisted restart key"))
+        {
+            keyId = key.Id;
+            fingerprint = key.Fingerprint;
+            await firstService.ExportAsync(key, package, PackagePassword);
+        }
+
+        var secondService = new KeyManagerService();
+        using var reopened = await secondService.ImportAsync(package, PackagePassword);
+
+        Assert.Equal(keyId, reopened.Id);
+        Assert.Equal(fingerprint, reopened.Fingerprint);
+    }
+
+    [Fact]
+    public async Task R2krecovery_FreshServiceRecoversPersistedRecoveryPackage()
+    {
+        using var temp = new TempDirectory();
+        var package = temp.PathFor("restart-key.r2krecovery");
+        Guid keyId;
+        string fingerprint;
+
+        var keys = new KeyManagerService();
+        var firstRecovery = new RecoveryPackageService();
+        using (var key = keys.Generate("Persisted recovery key"))
+        {
+            keyId = key.Id;
+            fingerprint = key.Fingerprint;
+            await firstRecovery.CreateAsync(key, package, PackagePassword);
+        }
+
+        var secondRecovery = new RecoveryPackageService();
+        using var reopened = await secondRecovery.OpenAsync(package, PackagePassword);
+
+        Assert.Equal(keyId, reopened.Id);
+        Assert.Equal(fingerprint, reopened.Fingerprint);
+    }
+
+    [Fact]
+    public async Task R2kid_FreshServiceImportsPersistedPrivateIdentity()
+    {
+        using var temp = new TempDirectory();
+        var package = temp.PathFor("restart-identity.r2kid");
+        Guid identityId;
+        string fingerprint;
+
+        var firstService = new IdentityService();
+        using (var identity = firstService.Generate("Persisted private identity"))
+        {
+            identityId = identity.Id;
+            fingerprint = identity.Fingerprint;
+            await firstService.ExportPrivateAsync(identity, package, PackagePassword);
+        }
+
+        var secondService = new IdentityService();
+        using var reopened = await secondService.ImportPrivateAsync(package, PackagePassword);
+
+        Assert.Equal(identityId, reopened.Id);
+        Assert.Equal(fingerprint, reopened.Fingerprint);
+    }
+
+    [Fact]
+    public async Task R2kpub_FreshServiceImportsPersistedPublicIdentity()
+    {
+        using var temp = new TempDirectory();
+        var publicCard = temp.PathFor("restart-identity.r2kpub");
+        Guid identityId;
+        string fingerprint;
+
+        var firstService = new IdentityService();
+        using (var identity = firstService.Generate("Persisted public identity"))
+        {
+            identityId = identity.Id;
+            fingerprint = identity.Fingerprint;
+            await firstService.ExportPublicAsync(identity, publicCard);
+        }
+
+        var secondService = new IdentityService();
+        var reopened = await secondService.ImportPublicAsync(publicCard);
+
+        Assert.Equal(identityId, reopened.Id);
+        Assert.Equal(fingerprint, reopened.Fingerprint);
+    }
+
+    [Fact]
+    public async Task R2ksig_FreshServicesReloadPublicIdentityAndVerifyPersistedSignature()
+    {
+        using var temp = new TempDirectory();
+        var source = temp.PathFor("signed-restart.bin");
+        var signature = temp.PathFor("signed-restart.bin.r2ksig");
+        var publicCard = temp.PathFor("signer.r2kpub");
+        await File.WriteAllBytesAsync(source, RandomNumberGenerator.GetBytes((128 * 1024) + 29));
+
+        var firstIdentities = new IdentityService();
+        var firstSignatures = new FileSignatureService();
+        using (var identity = firstIdentities.Generate("Restart signer"))
+        {
+            await firstIdentities.ExportPublicAsync(identity, publicCard);
+            await firstSignatures.SignAsync(source, signature, identity);
+        }
+
+        var secondIdentities = new IdentityService();
+        var secondSignatures = new FileSignatureService();
+        var expectedSigner = await secondIdentities.ImportPublicAsync(publicCard);
+        var result = await secondSignatures.VerifyAsync(source, signature, expectedSigner);
+
+        Assert.True(result.CryptographicSignatureValid);
+        Assert.True(result.FileContentMatches);
+        Assert.True(result.MatchesExpectedIdentity);
+        Assert.True(result.IsValid);
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public TempDirectory()
