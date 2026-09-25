@@ -50,6 +50,35 @@ public sealed class SecureVaultServiceTests
     }
 
     [Fact]
+    public async Task RestartStyle_NewService_ReopensVerifiesAndExtractsPersistedVault()
+    {
+        using var temp = new TempDirectory();
+        var vaultPath = temp.PathFor("restart.r2kvault");
+        var source = temp.PathFor("restart-source.bin");
+        var restored = temp.PathFor("restart-restored.bin");
+        var original = RandomNumberGenerator.GetBytes((512 * 1024) + 37);
+        await File.WriteAllBytesAsync(source, original);
+
+        var firstService = new SecureVaultService();
+        using (var created = await firstService.CreateAsync(vaultPath, Password))
+        {
+            await firstService.AddFileAsync(created, source, "Restart/source.bin");
+            Assert.Single(created.Entries);
+        }
+
+        var secondService = new SecureVaultService();
+        using var reopened = await secondService.UnlockAsync(vaultPath, Password);
+        await secondService.VerifyAsync(reopened);
+
+        var entry = Assert.Single(reopened.Entries);
+        Assert.Equal("Restart/source.bin", entry.Path);
+        await secondService.ExtractAsync(reopened, entry.Id, restored);
+
+        Assert.Equal(original, await File.ReadAllBytesAsync(restored));
+        Assert.True(File.Exists(source));
+    }
+
+    [Fact]
     public async Task RenameAndRemove_UpdateAuthenticatedManifest()
     {
         using var temp = new TempDirectory();
