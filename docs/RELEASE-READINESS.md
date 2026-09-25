@@ -50,7 +50,7 @@ dotnet test tests/Rice2k.Tests/Rice2k.Tests.csproj --configuration Release --no-
 
 All security/regression tests must pass. See GitHub Issue #6.
 
-Source preparation now includes round trips, corruption/truncation/resource-limit checks, cancellation/no-overwrite behavior, deterministic short-read handling, destination races, malformed `R2KENC01/02/03` header matrices, malformed `.r2kkey`/`.r2krecovery`/private `.r2kid` package matrices, vault fault injection/recovery tests, identity/signature/contact tests, Settings/App Lock/privacy persistence tests, and bounded same-handle file-read tests. **These source files do not satisfy this gate until the supported Windows/.NET 10 test run actually executes and passes.**
+Source preparation now includes round trips, corruption/truncation/resource-limit checks, cancellation/no-overwrite behavior, deterministic short-read handling, destination races, malformed `R2KENC01/02/03` header matrices, malformed `.r2kkey`/`.r2krecovery`/private `.r2kid` package matrices, vault fault injection/recovery tests, identity/signature/contact tests, Settings/App Lock/privacy persistence tests, protected-clipboard generation/timer tests, and bounded same-handle file-read tests. **These source files do not satisfy this gate until the supported Windows/.NET 10 test run actually executes and passes.**
 
 ### 3. Restart/round-trip persistence test — **PENDING**
 
@@ -73,6 +73,8 @@ Run multi-gigabyte streaming tests and the vault benchmark harness. Record peak 
 ### 6. App Lock/privacy lifecycle acceptance — **PENDING**
 
 Validate startup lock, manual lock, minimize lock, Windows session lock, inactivity lock, wrong passwords, lock-screen Exit, Privacy Mode, clipboard auto-clear and optional history behavior on Windows.
+
+Source-level privacy preparation now includes App Lock credential replacement/removal and hostile-parameter tests, fresh-instance persistence for App Lock/settings/optional redacted history, and deterministic protected-clipboard tests using an internal adapter/delay boundary. Those clipboard tests prove that an older Rice2k auto-clear timer cannot clear a newer Rice2k copy, a timer will not clear clipboard text that changed externally, Clear Now invalidates older timers, unchanged values clear through the expected-value check, and disabled auto-clear schedules no timer. **These tests exercise Rice2k's generation/timer logic only. Real Windows clipboard ownership, WPF dispatcher behavior, startup/minimize/session-lock/inactivity triggers, lock-screen focus/Exit, and Privacy Mode lifecycle still require manual Windows acceptance before Step 6 can pass.**
 
 ### 7. Accessibility acceptance — **PENDING**
 
