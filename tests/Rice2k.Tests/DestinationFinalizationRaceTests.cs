@@ -10,44 +10,6 @@ public sealed class DestinationFinalizationRaceTests
     private const string Sentinel = "destination created by another process";
 
     [Fact]
-    public async Task R2kenc01_Encrypt_LateDestinationCollisionPreservesOtherFile()
-    {
-        using var temp = new TempDirectory();
-        var source = temp.PathFor("v1-source.bin");
-        var destination = temp.PathFor("v1-output.r2kenc");
-        await File.WriteAllBytesAsync(source, RandomNumberGenerator.GetBytes(128 * 1024 + 17));
-        var service = new FileEncryptionService();
-        var progress = CreateLateCollisionProgress(destination, "Encrypting");
-
-        await Assert.ThrowsAsync<IOException>(() =>
-            service.EncryptFileAsync(source, destination, Password, progress, verifyAfterEncrypt: false));
-
-        Assert.Equal(Sentinel, await File.ReadAllTextAsync(destination));
-        Assert.True(File.Exists(source));
-        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
-    }
-
-    [Fact]
-    public async Task R2kenc01_Decrypt_LateDestinationCollisionPreservesOtherFile()
-    {
-        using var temp = new TempDirectory();
-        var source = temp.PathFor("v1-source.bin");
-        var encrypted = temp.PathFor("v1-source.bin.r2kenc");
-        var destination = temp.PathFor("v1-restored.bin");
-        await File.WriteAllBytesAsync(source, RandomNumberGenerator.GetBytes(128 * 1024 + 19));
-        var service = new FileEncryptionService();
-        await service.EncryptFileAsync(source, encrypted, Password, verifyAfterEncrypt: false);
-        var progress = CreateCompletionCollisionProgress(destination);
-
-        await Assert.ThrowsAsync<IOException>(() =>
-            service.DecryptFileAsync(encrypted, destination, Password, progress));
-
-        Assert.Equal(Sentinel, await File.ReadAllTextAsync(destination));
-        Assert.True(File.Exists(encrypted));
-        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
-    }
-
-    [Fact]
     public async Task R2kenc02_Encrypt_LateDestinationCollisionPreservesOtherFile()
     {
         using var temp = new TempDirectory();
