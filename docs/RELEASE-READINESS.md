@@ -68,7 +68,7 @@ Source-controlled negative coverage has been expanded to include malformed-heade
 
 Run multi-gigabyte streaming tests and the vault benchmark harness. Record peak memory, throughput, failures and recovery behavior.
 
-`tools/Rice2k.FileBench` and `tools/Rice2k.VaultBench` provide source-controlled correctness/throughput harnesses. A file-encryption release-gate run should use at least a 2 GiB source and compare source/restored hashes while recording memory and throughput. The existence of these harnesses does not satisfy this step until the runs are completed and recorded.
+`tools/Rice2k.FileBench` and `tools/Rice2k.VaultBench` provide source-controlled correctness/throughput harnesses. Both now emit Rice2k version plus OS/.NET/architecture/CPU metadata, use collision-resistant working directories, report managed and process peak memory, and fail closed on correctness/preservation mismatches. FileBench records the original SHA-256, performs full encrypted-container verification, decrypts, re-hashes the original source, and requires both source preservation and restored SHA-256 equality. VaultBench preflights disk space, hashes the entire source set before vault work, validates manifest entry count and total plaintext bytes, fully verifies the vault, extracts and checks a file, then re-hashes every original source file to prove vault operations did not modify them. A file-encryption release-gate run should use at least a 2 GiB source; representative multi-gigabyte and many-file vault workloads must also be executed and recorded. **The existence of these hardened harnesses does not satisfy this step until those supported Windows runs complete successfully.**
 
 ### 6. App Lock/privacy lifecycle acceptance — **PENDING**
 
