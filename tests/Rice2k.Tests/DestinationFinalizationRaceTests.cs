@@ -136,6 +136,38 @@ public sealed class DestinationFinalizationRaceTests
         Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
     }
 
+    [Fact]
+    public async Task SecureVault_Extract_LateDestinationCollisionPreservesOtherFile()
+    {
+        using var temp = new TempDirectory();
+        var vaultPath = temp.PathFor("race.r2kvault");
+        var source = temp.PathFor("vault-source.bin");
+        var destination = temp.PathFor("vault-restored.bin");
+        await File.WriteAllBytesAsync(source, RandomNumberGenerator.GetBytes(128 * 1024 + 41));
+        var service = new SecureVaultService();
+        using var session = await service.CreateAsync(vaultPath, Password);
+        await service.AddFileAsync(session, source, "vault-source.bin");
+        var entry = Assert.Single(session.Entries);
+        var progress = new ImmediateProgress<VaultOperationProgress>(value =>
+        {
+            if (value.Stage == "Restoring file" &&
+                value.TotalBytes > 0 &&
+                value.BytesProcessed >= value.TotalBytes &&
+                !File.Exists(destination))
+            {
+                File.WriteAllText(destination, Sentinel);
+            }
+        });
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            service.ExtractWithProgressAsync(session, entry.Id, destination, progress));
+
+        Assert.Equal(Sentinel, await File.ReadAllTextAsync(destination));
+        Assert.True(File.Exists(vaultPath));
+        Assert.True(File.Exists(source));
+        Assert.Empty(Directory.GetFiles(temp.DirectoryPath, "*.partial"));
+    }
+
     private static IProgress<CryptoProgress> CreateLateCollisionProgress(string destination, string stage) =>
         new ImmediateProgress<CryptoProgress>(value =>
         {
