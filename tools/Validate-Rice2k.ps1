@@ -1,5 +1,9 @@
 param(
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [switch]$RunBenchmarks,
+    [ValidateRange(1, 32768)] [int]$FileBenchmarkMb = 2048,
+    [ValidateRange(1, 16384)] [int]$VaultBenchmarkFileSizeMb = 512,
+    [ValidateRange(1, 10000)] [int]$VaultBenchmarkFiles = 4
 )
 
 Set-StrictMode -Version Latest
@@ -9,6 +13,8 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $solution = Join-Path $repoRoot 'Rice2kEncryption.sln'
 $testProject = Join-Path $repoRoot 'tests\Rice2k.Tests\Rice2k.Tests.csproj'
 $projectFile = Join-Path $repoRoot 'src\Rice2k.App\Rice2k.App.csproj'
+$fileBenchmarkProject = Join-Path $repoRoot 'tools\Rice2k.FileBench\Rice2k.FileBench.csproj'
+$vaultBenchmarkProject = Join-Path $repoRoot 'tools\Rice2k.VaultBench\Rice2k.VaultBench.csproj'
 $staticPreflightScript = Join-Path $PSScriptRoot 'Static-WpfPreflight.ps1'
 $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $outputDirectory = Join-Path $repoRoot "artifacts\validation\$timestamp"
@@ -125,6 +131,41 @@ try {
         $results.Add($test)
         if (-not $test.Passed) { throw 'Security/regression tests failed.' }
     }
+
+    if ($RunBenchmarks) {
+        if (-not (Test-Path $fileBenchmarkProject)) {
+            throw "File benchmark project was not found: $fileBenchmarkProject"
+        }
+        if (-not (Test-Path $vaultBenchmarkProject)) {
+            throw "Vault benchmark project was not found: $vaultBenchmarkProject"
+        }
+
+        $fileBenchmark = Invoke-DotNetStep -Name "Run large-file benchmark ($FileBenchmarkMb MiB)" -Arguments @(
+            'run',
+            '--project', $fileBenchmarkProject,
+            '--configuration', 'Release',
+            '--no-build',
+            '--no-restore',
+            '--',
+            '--file-size-mb', [string]$FileBenchmarkMb
+        ) -LogName '06-file-benchmark.log'
+        $results.Add($fileBenchmark)
+        if (-not $fileBenchmark.Passed) { throw 'Large-file benchmark failed.' }
+
+        $vaultTotalMb = checked($VaultBenchmarkFileSizeMb * $VaultBenchmarkFiles)
+        $vaultBenchmark = Invoke-DotNetStep -Name "Run Secure Vault benchmark ($VaultBenchmarkFiles files x $VaultBenchmarkFileSizeMb MiB = $vaultTotalMb MiB)" -Arguments @(
+            'run',
+            '--project', $vaultBenchmarkProject,
+            '--configuration', 'Release',
+            '--no-build',
+            '--no-restore',
+            '--',
+            '--file-size-mb', [string]$VaultBenchmarkFileSizeMb,
+            '--files', [string]$VaultBenchmarkFiles
+        ) -LogName '07-vault-benchmark.log'
+        $results.Add($vaultBenchmark)
+        if (-not $vaultBenchmark.Passed) { throw 'Secure Vault benchmark failed.' }
+    }
 }
 catch {
     $validationFailed = $true
@@ -139,6 +180,13 @@ finally {
 
     if (-not $SkipTests -and ($results | Where-Object Name -eq 'Run security/regression tests').Count -eq 0) {
         $overallPassed = $false
+    }
+
+    if ($RunBenchmarks) {
+        if (($results | Where-Object Name -Like 'Run large-file benchmark*').Count -eq 0 -or
+            ($results | Where-Object Name -Like 'Run Secure Vault benchmark*').Count -eq 0) {
+            $overallPassed = $false
+        }
     }
 
     $lines = [System.Collections.Generic.List[string]]::new()
@@ -168,6 +216,15 @@ finally {
     if ($SkipTests) {
         $lines.Add('')
         $lines.Add('> Tests were intentionally skipped. This result cannot satisfy the Beta test gate.')
+    }
+
+    if ($RunBenchmarks) {
+        $lines.Add('')
+        $lines.Add("> Large-data benchmarks were requested: FileBench=$FileBenchmarkMb MiB; VaultBench=$VaultBenchmarkFiles x $VaultBenchmarkFileSizeMb MiB ($vaultTotalMb MiB total plaintext). Review both benchmark logs before recording Step 5 evidence.")
+    }
+    else {
+        $lines.Add('')
+        $lines.Add('> Large-data benchmarks were not requested. This validation result cannot by itself satisfy release-readiness Step 5.')
     }
 
     $lines.Add('')
