@@ -193,7 +193,7 @@ finally {
     $lines.Add('# Rice2k Local Validation Result')
     $lines.Add('')
     $lines.Add("- Version: **$version**")
-    $lines.Add("- Commit: `$commit`")
+    $lines.Add(('- Commit: `{0}`' -f $commit))
     $lines.Add("- Started: $($started.ToString('o'))")
     $lines.Add("- Finished: $($finished.ToString('o'))")
     $lines.Add("- Host OS: $([System.Environment]::OSVersion.VersionString)")
@@ -210,7 +210,8 @@ finally {
         # directory. Using only the leaf name keeps this summary compatible with
         # Windows PowerShell 5.1, whose .NET Framework lacks Path.GetRelativePath.
         $relativeLog = Split-Path -Leaf $result.LogPath
-        $lines.Add("| $($result.Name) | $(if ($result.Passed) { 'PASS' } else { 'FAIL' }) | $($result.ExitCode) | `$relativeLog` |")
+        $resultLabel = if ($result.Passed) { 'PASS' } else { 'FAIL' }
+        $lines.Add(('| {0} | {1} | {2} | `{3}` |' -f $result.Name, $resultLabel, $result.ExitCode, $relativeLog))
     }
 
     if ($SkipTests) {
