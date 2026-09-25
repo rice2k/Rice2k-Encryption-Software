@@ -20,6 +20,7 @@ $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $outputDirectory = Join-Path $repoRoot "artifacts\validation\$timestamp"
 $testResultsDirectory = Join-Path $outputDirectory 'TestResults'
 $summaryPath = Join-Path $outputDirectory 'VALIDATION-SUMMARY.md'
+$vaultTotalMb = ([long]$VaultBenchmarkFileSizeMb) * ([long]$VaultBenchmarkFiles)
 
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 New-Item -ItemType Directory -Force -Path $testResultsDirectory | Out-Null
@@ -152,7 +153,6 @@ try {
         $results.Add($fileBenchmark)
         if (-not $fileBenchmark.Passed) { throw 'Large-file benchmark failed.' }
 
-        $vaultTotalMb = checked($VaultBenchmarkFileSizeMb * $VaultBenchmarkFiles)
         $vaultBenchmark = Invoke-DotNetStep -Name "Run Secure Vault benchmark ($VaultBenchmarkFiles files x $VaultBenchmarkFileSizeMb MiB = $vaultTotalMb MiB)" -Arguments @(
             'run',
             '--project', $vaultBenchmarkProject,
