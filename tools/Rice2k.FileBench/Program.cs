@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using Rice2k.Encryption.Models;
 using Rice2k.Encryption.Services;
@@ -8,15 +10,28 @@ const string BenchmarkPassword = "Rice2k large-file benchmark password 2026";
 var fileSizeMb = ReadIntArgument(args, "--file-size-mb", 256, 1, 32 * 1024);
 var keep = args.Any(arg => string.Equals(arg, "--keep", StringComparison.OrdinalIgnoreCase));
 var fileBytes = checked((long)fileSizeMb * 1024 * 1024);
+var runId = $"{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..8]}";
 
-var root = Path.Combine(Path.GetTempPath(), "Rice2k.FileBench", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"));
+var root = Path.Combine(Path.GetTempPath(), "Rice2k.FileBench", runId);
 var sourcePath = Path.Combine(root, "source.bin");
 var encryptedPath = Path.Combine(root, "source.bin.r2kenc");
 var restoredPath = Path.Combine(root, "restored.bin");
 Directory.CreateDirectory(root);
 EnsureDiskSpace(root, fileBytes);
 
+var assembly = typeof(FileEncryptionService).Assembly;
+var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+    ?? assembly.GetName().Version?.ToString()
+    ?? "unknown";
+var startedUtc = DateTimeOffset.UtcNow;
+
 Console.WriteLine("Rice2k large-file streaming validation");
+Console.WriteLine($"Rice2k version: {informationalVersion}");
+Console.WriteLine($"Started UTC: {startedUtc:O}");
+Console.WriteLine($"OS: {RuntimeInformation.OSDescription}");
+Console.WriteLine($".NET: {RuntimeInformation.FrameworkDescription}");
+Console.WriteLine($"Process architecture: {RuntimeInformation.ProcessArchitecture}");
+Console.WriteLine($"Processor count: {Environment.ProcessorCount}");
 Console.WriteLine($"Plaintext size: {FormatBytes(fileBytes)}");
 Console.WriteLine($"Working directory: {root}");
 Console.WriteLine("This harness streams data and hashes; it does not intentionally load the whole test file into memory.");
@@ -24,6 +39,7 @@ Console.WriteLine();
 
 await using var memorySampler = new MemorySampler();
 byte[]? sourceHash = null;
+byte[]? finalSourceHash = null;
 byte[]? restoredHash = null;
 
 try
@@ -55,7 +71,10 @@ try
         verifyAfterEncrypt: false);
     encryptTimer.Stop();
     PrintRate("Encryption", fileBytes, encryptTimer.Elapsed);
-    Console.WriteLine($"Encrypted container: {FormatBytes(new FileInfo(encryptedPath).Length)}");
+    var encryptedLength = new FileInfo(encryptedPath).Length;
+    if (encryptedLength <= 0)
+        throw new InvalidDataException("Encryption completed without producing a non-empty encrypted container.");
+    Console.WriteLine($"Encrypted container: {FormatBytes(encryptedLength)}");
     Console.WriteLine();
 
     Console.WriteLine("Authenticating the full encrypted container...");
@@ -83,10 +102,18 @@ try
     restoredHashTimer.Stop();
     PrintRate("Restored SHA-256", fileBytes, restoredHashTimer.Elapsed);
 
+    Console.WriteLine("Re-hashing source to prove the original remained unchanged...");
+    var finalSourceHashTimer = Stopwatch.StartNew();
+    finalSourceHash = await HashFileAsync(sourcePath);
+    finalSourceHashTimer.Stop();
+    PrintRate("Final source SHA-256", fileBytes, finalSourceHashTimer.Elapsed);
+
     if (new FileInfo(sourcePath).Length != fileBytes)
         throw new InvalidDataException("Source length changed during the benchmark.");
     if (new FileInfo(restoredPath).Length != fileBytes)
         throw new InvalidDataException("Restored length does not match the original source length.");
+    if (!CryptographicOperations.FixedTimeEquals(sourceHash, finalSourceHash))
+        throw new InvalidDataException("Source preservation check failed: the source SHA-256 changed during the benchmark.");
     if (!CryptographicOperations.FixedTimeEquals(sourceHash, restoredHash))
         throw new InvalidDataException("Large-file correctness check failed: restored SHA-256 did not match the source file.");
 
@@ -94,9 +121,12 @@ try
     process.Refresh();
 
     Console.WriteLine($"Restored SHA-256: {Convert.ToHexString(restoredHash)}");
+    Console.WriteLine($"Final source SHA-256: {Convert.ToHexString(finalSourceHash)}");
+    Console.WriteLine("Source preservation: PASS");
     Console.WriteLine("Correctness: PASS");
     Console.WriteLine($"Peak managed memory observed: {FormatBytes(memorySampler.MaxManagedBytes)}");
     Console.WriteLine($"Process peak working set: {FormatBytes(process.PeakWorkingSet64)}");
+    Console.WriteLine($"Completed UTC: {DateTimeOffset.UtcNow:O}");
     Console.WriteLine();
     Console.WriteLine("Large-file streaming validation completed successfully.");
 }
@@ -104,6 +134,8 @@ finally
 {
     if (sourceHash is not null)
         CryptographicOperations.ZeroMemory(sourceHash);
+    if (finalSourceHash is not null)
+        CryptographicOperations.ZeroMemory(finalSourceHash);
     if (restoredHash is not null)
         CryptographicOperations.ZeroMemory(restoredHash);
 
