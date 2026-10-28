@@ -276,3 +276,9 @@ MIT License. See [LICENSE](LICENSE).
 ---
 
 **Mission:** Make powerful encryption secure, understandable, and easy enough for anyone to use.
+
+## Related Rice2K projects
+
+This project remains a **security preview**; inspect the documented status and limitations before testing with sensitive files.
+
+[Rice2k Folder Vault](https://github.com/rice2k/Rice2k-Folder-Vault) · [Explore security-related Rice2K projects](https://rice2k.github.io/rice2k-startdeck/projects/?category=Security)
